@@ -3,4 +3,4 @@ pandas
 fpdf
 plotly
 reportlab
-google-genai
+groq
