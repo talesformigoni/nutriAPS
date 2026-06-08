@@ -130,7 +130,7 @@ def calcular_classificacao_atalah(peso_atual, altura_cm, semana, peso_pre=0.0):
         diagnostico = "Seu corpo está se preparando para nutrir uma nova vida, e a sua curva atual indica baixo peso para esta fase da gestação."
         conselho = f"Para garantir que o bebê cresça forte, nosso objetivo de ganho total deve ser entre {ganho_min} e {ganho_max} kg. Não coma grandes volumes à força, mas aumente a energia das refeições adicionando opções nutritivas: abacate, azeite, raízes e ovos. Cada grama ganha com saúde é um tijolinho na formação do bebê!"
     elif classificacao_atual == "Eutrofia / Adequado":
-        diagnostico = "Excelente notícia! Você está com o IMC perfeitamente adequado para a sua semana gestacional (Curva de Atalah)."
+        diagnostico = "Excelente notícia! Você está com o IMC perfeitamente adequado para a sua semana gestacional."
         conselho = f"Nosso objetivo agora é manter esse equilíbrio, com um ganho de peso total entre {ganho_min} e {ganho_max} kg até o fim da gravidez. Lembre-se: você não precisa 'comer por dois', mas sim comer duas vezes melhor! Continue priorizando comida de verdade e bebendo bastante água."
     elif classificacao_atual == "Sobrepeso":
         diagnostico = "Você está com o IMC na faixa de sobrepeso para a sua idade gestacional. Seu corpo já possui uma boa reserva de energia guardada para o bebê!"

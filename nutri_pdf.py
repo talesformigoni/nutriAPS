@@ -2,6 +2,7 @@ import locale
 import datetime
 import re
 import textwrap
+import math
 from io import BytesIO
 
 from reportlab.lib.pagesizes import A4
@@ -488,214 +489,499 @@ def gerar_pdf_paciente(nome, idade, sexo, peso, altura, imc, classif_imc,
 # ═══════════════════════════════════════════════════════════════════════════
 # PDF DO CARDÁPIO GERADO PELA IA
 # ═══════════════════════════════════════════════════════════════════════════
-def gerar_pdf_cardapio_ia(dados_paciente: dict, texto_cardapio: str) -> bytes:
+def gerar_pdf_gestante(dados_g):
+    """
+    Gera o PDF Profissional Monocromático (Print-Friendly) para Gestantes,
+    incluindo a Curva de Atalah vetorial desenhada à mão e textos justificados.
+    """
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.units import mm
+    from io import BytesIO
+    import datetime
+    from reportlab.platypus import Table, TableStyle, Paragraph
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.enums import TA_JUSTIFY
 
-    nome = dados_paciente.get("nome", "Paciente")
-    buf  = BytesIO()
-    c    = canvas.Canvas(buf, pagesize=A4)
+    W, H = A4
+    buf = BytesIO()
+    c = canvas.Canvas(buf, pagesize=A4)
 
-    # ─── PÁGINA 1 — Capa do Cardápio ─────────────────────────────────────
-    c.setFillColor(AZUL_ESCURO)
-    c.rect(0, H - 70*mm, W, 70*mm, fill=1, stroke=0)
-    c.setFillColor(AZUL_MEDIO)
-    c.rect(0, H - 73*mm, W, 4*mm, fill=1, stroke=0)
+    # ─── DEFINIÇÃO DA PALETA MONOCROMÁTICA ───
+    PRETO_TITULO = colors.HexColor("#000000")
+    PRETO_TEXTO = colors.HexColor("#222222")
+    CINZA_ESCURO = colors.HexColor("#555555")
+    CINZA_MEDIO = colors.HexColor("#AAAAAA")
+    CINZA_CLARO = colors.HexColor("#DDDDDD")
+    CINZA_FUNDO = colors.HexColor("#EEEEEE")
+    BRANCO = colors.white
 
-    c.setFillColor(BRANCO)
-    c.setFont("Helvetica-Bold", 20)
-    c.drawString(15*mm, H - 28*mm, "Cardápio Personalizado")
-    c.setFont("Helvetica", 10)
-    c.setFillColor(colors.HexColor("#DDDDDD"))
-    c.setFillColor(BRANCO)
-    c.setFont("Helvetica-Bold", 14)
-    c.drawString(15*mm, H - 50*mm, _limpar(nome))
+    # -- Dados de Entrada --
+    res = dados_g['res_gest']
+    hoje = datetime.datetime.now()
+    
+    meses = ["", "janeiro", "fevereiro", "março", "abril", "maio", "junho", 
+             "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"]
+    data_formatada = f"Gerado em {hoje.day:02d} de {meses[hoje.month]} de {hoje.year}"
+
+    # ── TRATAMENTO ANTI-ERRO PARA DADOS OPCIONAIS ──
+    imc_pre_val = res.get('imc_pre')
+    gpg_val = res.get('gpg')
+    
+    imc_pre_str = f"{imc_pre_val:.1f}" if imc_pre_val else "N/I"
+    gpg_str = f"{gpg_val:.1f} kg até o momento" if gpg_val is not None else "Não informado"
+    
+    if imc_pre_val and gpg_val is not None:
+        peso_pre_str = f"{dados_g['peso'] - gpg_val:.1f} kg (Relatado)"
+        if imc_pre_val < 18.5: classif_pre_str = "BAIXO PESO"
+        elif imc_pre_val < 25.0: classif_pre_str = "EUTROFIA"
+        elif imc_pre_val < 30.0: classif_pre_str = "SOBREPESO"
+        else: classif_pre_str = "OBESIDADE"
+    else:
+        peso_pre_str = "Não informado"
+        classif_pre_str = "NÃO AVALIADO"
+
+    # ─── PÁGINA 1 — Capa e Monitoramento Atalah ──────────────────────────────
+    
+    c.setFillColor(CINZA_FUNDO)
+    c.rect(0, H - 65*mm, W, 65*mm, fill=1, stroke=0)
+    
+    c.setFillColor(PRETO_TITULO)
+    c.setFont("Helvetica-Bold", 22)
+    c.drawString(15*mm, H - 25*mm, "Mapa de Saúde Gestacional")
+
+    c.setFont("Helvetica", 11)
+    c.setFillColor(CINZA_ESCURO)
+    c.drawString(15*mm, H - 32*mm, "Atenção Primária à Saúde | Linha de Cuidado da Gestante")
     c.setFont("Helvetica", 9)
-    c.setFillColor(colors.HexColor("#CCCCCC"))
-    c.drawString(15*mm, H - 58*mm,
-                 datetime.datetime.now().strftime("Gerado em %d/%m/%Y"))
+    c.drawString(15*mm, H - 37*mm, "Prefeitura de Buritis-RO | Secretaria Municipal de Saúde")
 
-    # Métricas
-    larg = 55*mm
-    _tag_metrica(c, 15*mm,  H - 93*mm, larg,
-                 "Gasto Energético Total", f"{dados_paciente.get('get',0):.0f} kcal")
-    _tag_metrica(c, 75*mm,  H - 93*mm, larg,
-                 "Peso", f"{dados_paciente.get('peso',0):.1f} kg")
-    _tag_metrica(c, 135*mm, H - 93*mm, larg,
-                 "IMC",
-                 f"{dados_paciente.get('imc',0):.1f}",
-                 cor=VERDE if dados_paciente.get('imc',30) < 25 else
-                     AMARELO if dados_paciente.get('imc',30) < 30 else VERMELHO)
+    c.setFillColor(PRETO_TITULO)
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(15*mm, H - 48*mm, _limpar(dados_g['nome']).upper())
+    
+    c.setFont("Helvetica", 9)
+    c.setFillColor(CINZA_ESCURO)
+    c.drawString(15*mm, H - 54*mm, data_formatada)
 
-    # ─── Corpo do cardápio ────────────────────────────────────────────────
-    y = H - 105*mm
-    y = _titulo_secao(c, y, "Plano Alimentar do Dia", cor=AZUL_MEDIO)
-    y -= 3*mm
+    # ── CARDS DE MÉTRICAS (Topo) ──
+    larg_card = 52*mm
+    y_cards = H - 85*mm
+    
+    _tag_metrica_mono(c, 15*mm, y_cards, larg_card, "IDADE GESTACIONAL", f"{dados_g['semana']} sem")
+    _tag_metrica_mono(c, 71*mm, y_cards, larg_card, "PESO ATUAL", f"{dados_g['peso']:.1f} kg")
+    _tag_metrica_mono(c, 127*mm, y_cards, larg_card, "IMC PRÉ-GESTACIONAL", imc_pre_str)
+    
+    _card_mono(c, 127*mm, y_cards - 12*mm, larg_card, 7*mm, cor_fundo=CINZA_CLARO)
+    c.setFillColor(PRETO_TEXTO)
+    c.setFont("Helvetica-Bold", 8)
+    c.drawCentredString(127*mm + larg_card/2, y_cards - 9*mm, f"INICIAL: {classif_pre_str}")
 
-    SUBTITULOS = ["café", "lanche", "almoço", "jantar", "ceia", "total", "dica"]
-    num_pag = 1
-    table_data = []
-
-    def desenhar_tabela_acumulada(c, dados_tabela, y_atual, pag_atual):
-        if not dados_tabela:
-            return y_atual, pag_atual
-            
-        from reportlab.platypus import Paragraph
-        from reportlab.lib.styles import ParagraphStyle
-        from reportlab.lib.enums import TA_CENTER
-        
-        # Estilos do Paragraph para permitir a quebra de texto (wrap) automática
-        style_header = ParagraphStyle(
-            name='Header', fontName='Helvetica-Bold', fontSize=8, 
-            textColor=BRANCO, alignment=TA_CENTER
-        )
-        style_body = ParagraphStyle(
-            name='Body', fontName='Helvetica', fontSize=8, 
-            textColor=CINZA_TEXTO, alignment=TA_CENTER
-        )
-
-        # Converte as strings brutas em Paragraphs do ReportLab
-        dados_formatados = []
-        for row_idx, row in enumerate(dados_tabela):
-            nova_linha = []
-            for col in row:
-                texto = str(col).strip()
-                if row_idx == 0:
-                    nova_linha.append(Paragraph(texto, style_header))
-                else:
-                    nova_linha.append(Paragraph(texto, style_body))
-            dados_formatados.append(nova_linha)
-        
-        num_cols = len(dados_tabela[0])
-        largura_disp = W - 30*mm
-        
-        # Ajuste inteligente de largura das colunas
-        if num_cols == 8:
-            # Dá mais espaço para Alimento e Medidas, menos para os Macros
-            col_w = [
-                largura_disp * 0.22, # Alimento
-                largura_disp * 0.14, # Quantidade
-                largura_disp * 0.18, # Medida caseira
-                largura_disp * 0.09, # kcal
-                largura_disp * 0.09, # Proteína
-                largura_disp * 0.10, # Carboidrato
-                largura_disp * 0.09, # Gordura
-                largura_disp * 0.09  # Fibra
-            ]
-        else:
-            col_w = [largura_disp / num_cols] * num_cols
-
-        t_style = TableStyle([
-            ("BACKGROUND",   (0,0), (-1,0),  AZUL_ESCURO),
-            ("ALIGN",        (0,0), (-1,-1), "CENTER"),
-            ("VALIGN",       (0,0), (-1,-1), "MIDDLE"),
-            ("ROWBACKGROUNDS", (0,1), (-1,-1), [BRANCO, CINZA_ALT]),
-            ("GRID",         (0,0), (-1,-1), 0.3, CINZA_BORDA),
-            ("TOPPADDING",   (0,0), (-1,-1), 4),
-            ("BOTTOMPADDING",(0,0), (-1,-1), 4),
-            ("LEFTPADDING",  (0,0), (-1,-1), 2),
-            ("RIGHTPADDING", (0,0), (-1,-1), 2),
-        ])
-        
-        t = Table(dados_formatados, colWidths=col_w)
-        t.setStyle(t_style)
-        tw, th = t.wrapOn(c, W - 30*mm, H)
-        
-        # Se a tabela não couber inteira na página, quebra a página antes de desenhá-la
-        if y_atual - th < 20*mm:
-            _rodape_pagina(c, nome, pag_atual)
-            c.showPage()
-            pag_atual += 1
-            _cabecalho_pagina(c, "Cardápio (continuação)")
-            y_atual = H - 35*mm
-            
-        t.drawOn(c, 15*mm, y_atual - th)
-        return y_atual - th - 6*mm, pag_atual
-
-    for linha in texto_cardapio.splitlines():
-        linha_b = _limpar_md(_limpar(linha)).strip()
-        
-        # 1. Verifica se a linha atual é de uma Tabela Markdown (inicia e termina com |)
-        if linha_b.startswith('|') and linha_b.endswith('|'):
-            # Ignora a linha divisória do Markdown (ex: |---|---|)
-            if '---' in linha_b:
-                continue
-            
-            # Limpa e extrai as colunas
-            colunas = [col.strip() for col in linha_b.strip('|').split('|')]
-            table_data.append(colunas)
-            continue
-            
-        else:
-            # 2. Se a linha não é tabela, mas a tabela estava sendo construída, DESENHA a tabela agora.
-            if table_data:
-                y, num_pag = desenhar_tabela_acumulada(c, table_data, y, num_pag)
-                table_data = [] # Zera a tabela para a próxima
-                
-            # 3. Fluxo normal: Texto, Pulos de linha e Subtítulos
-            if not linha_b:
-                y -= 3*mm
-                continue
-
-            eh_sub = any(linha_b.lower().startswith(s) for s in SUBTITULOS)
-            pedacos = textwrap.wrap(linha_b, width=90) or [linha_b]
-
-            for i, pedaco in enumerate(pedacos):
-                if y < 20*mm:
-                    _rodape_pagina(c, nome, num_pag)
-                    c.showPage()
-                    num_pag += 1
-                    _cabecalho_pagina(c, "Cardápio (continuação)")
-                    y = H - 35*mm
-
-                if eh_sub and i == 0:
-                    y -= 2*mm
-                    c.setFillColor(AZUL_CLARO)
-                    c.rect(15*mm, y - 1.5*mm, W - 30*mm, 7*mm, fill=1, stroke=0)
-                    c.setFillColor(AZUL_MEDIO)
-                    c.rect(15*mm, y - 1.5*mm, 3*mm, 7*mm, fill=1, stroke=0)
-                    c.setFillColor(AZUL_ESCURO)
-                    c.setFont("Helvetica-Bold", 10)
-                    c.drawString(21*mm, y + 0.5*mm, pedaco)
-                    y -= 9*mm
-                else:
-                    c.setFillColor(CINZA_TEXTO)
-                    c.setFont("Helvetica", 9)
-                    c.drawString(18*mm, y, pedaco)
-                    y -= 6*mm
-
-    # 4. Caso o texto acabe mas ainda haja uma tabela pendente, desenha ela.
-    if table_data:
-        y, num_pag = desenhar_tabela_acumulada(c, table_data, y, num_pag)
-
-    # Nota de rodapé de conteúdo
+    # ── SEÇÃO 1: Identificação Detalhada ──
+    y = y_cards - 25*mm
+    y = _titulo_secao_mono(c, y, "1. IDENTIFICAÇÃO E BIOMETRIA")
     y -= 5*mm
-    if y < 35*mm:
-        _rodape_pagina(c, nome, num_pag)
-        c.showPage()
-        num_pag += 1
-        _cabecalho_pagina(c, "Observações")
-        y = H - 35*mm
+    
+    y = _linha_info_mono(c, y, "Nome Completo:", dados_g['nome'], fundo=True)
+    y = _linha_info_mono(c, y, "Idade da Paciente:", f"{dados_g['idade']} anos", fundo=False)
+    y = _linha_info_mono(c, y, "Altura da Paciente:", f"{dados_g['altura']} cm", fundo=True)
+    y = _linha_info_mono(c, y, "Peso Pré-Gestacional:", peso_pre_str, fundo=False)
+    y = _linha_info_mono(c, y, "Peso Atual na Consulta:", f"{dados_g['peso']:.1f} kg", fundo=True)
+    y = _linha_info_mono(c, y, "Ganho de Peso Total (GPG):", gpg_str, fundo=False)
+    
+    y -= 8*mm
+    y = _titulo_secao_mono(c, y, "2. CLASSIFICAÇÃO ATUAL (ATALAH 1997)")
+    y -= 5*mm
+    y = _linha_info_mono(c, y, "Semana Gestacional Calculada:", f"{dados_g['semana']} semanas", fundo=True)
+    y = _linha_info_mono(c, y, "IMC Atual da Semana:", f"{res['imc_atual']:.1f} kg/m²", fundo=False)
+    y = _linha_info_mono(c, y, "Estado Nutricional Atual:", f"{res['classificacao_atual'].upper()}", fundo=True, cor_valor=PRETO_TITULO)
+    y = _linha_info_mono(c, y, "Meta de Ganho Total Recomendada:", f"{res['ganho_min']} a {res['ganho_max']} kg", fundo=False)
 
-    nota = ("Este cardápio foi gerado pela ferramenta Mapa Nutricional desenvolvida pelo Nutricionista Residente Tales Formigoni. "
-            "Ferramenta preparada exclusivamente para uso na APS por profissionais da Nutrição. "
-            "Este cardápio é individual e instransferível.")
+    # ── SEÇÃO 3: Diagnóstico e Conduta (Texto Humanizado Justificado) ──
+    y -= 8*mm
+    y = _titulo_secao_mono(c, y, "3. DIAGNÓSTICO E CONDUTA NUTRICIONAL")
+    y -= 4*mm
     
-    # Quebra o texto para não vazar as margens (aprox. 110 caracteres por linha)
-    linhas_nota = textwrap.wrap(nota, width=110)
-    altura_caixa = (len(linhas_nota) * 4 * mm) + 6 * mm
-    
-    c.setFillColor(CINZA_ALT)
-    # Desenha a caixa cinza com altura dinâmica
-    c.rect(15*mm, y - altura_caixa, W - 30*mm, altura_caixa, fill=1, stroke=0)
-    
-    c.setFillColor(CINZA_TEXTO)
-    c.setFont("Helvetica", 7.5)
-    
-    # Escreve cada linha centralizada
-    y_atual = y - 6 * mm
-    for linha in linhas_nota:
-        c.drawCentredString(W/2, y_atual, linha)
-        y_atual -= 4 * mm
+    texto_laudo = f"\"{res['diagnostico']}\" — {res['conselho']}"
+    texto_limpo = texto_laudo
 
-    _rodape_pagina(c, nome, num_pag)
+    # Utilizando Paragraph para justificar o texto perfeitamente
+    estilo_justificado = ParagraphStyle(
+        'Justificado',
+        fontName='Helvetica-Oblique',
+        fontSize=9,
+        textColor=CINZA_ESCURO,
+        alignment=TA_JUSTIFY,
+        leading=13 # Espaçamento confortável entre as linhas
+    )
+    
+    p = Paragraph(texto_limpo, estilo_justificado)
+    w_p, h_p = p.wrap(175*mm, 50*mm) # 175mm é a largura útil da página
+    y -= h_p # Desce o cursor na página com base no tamanho exato do bloco de texto
+    p.drawOn(c, 18*mm, y)
+
+# --- NOVO BLOCO: CUIDADOS ESPECIAIS (SÓ APARECE SE SELECIONADO) ---
+    is_dmg = dados_g.get('is_dmg', False)
+    is_has = dados_g.get('is_has', False)
+
+    if is_dmg or is_has:
+        y -= 10*mm
+        
+        # Título sem numeração, apenas um destaque visual
+        c.setFont("Helvetica-Bold", 10)
+        c.setFillColor(PRETO_TITULO)
+        c.drawString(15*mm, y, "CUIDADOS ESPECIAIS")
+        c.setStrokeColor(colors.black)
+        c.setLineWidth(0.3)
+        c.line(15*mm, y - 2*mm, 195*mm, y - 2*mm)
+        y -= 6*mm
+
+        # Define qual texto usar baseado nas seleções
+        if is_dmg and is_has:
+            texto_especial = "Neste momento, seu corpo está passando por grandes adaptações com a glicose e a pressão. Isso exige carinho e cuidado em dobro com as suas escolhas. O alimento será o seu principal remédio para que você e o bebê cheguem ao final da gestação com muita saúde. Vamos unir forças: comida de verdade, feita em casa. Descasque mais e desembale menos. Evite industrializados, doces e temperos prontos. Foque no arroz com feijão, carnes magras, ovos, saladas variadas e muita hidratação. Estamos juntos com você nessa jornada!"
+        elif is_dmg:
+            texto_especial = "Notamos que a sua glicose está precisando de uma atenção especial. Fique tranquila! Nossa missão não é fazer você passar fome ou cortar todo o carboidrato, mas sim ensinar o seu corpo a absorver o açúcar bem devagar para proteger o crescimento do bebê. Sempre combine um carboidrato com uma fibra ou proteína. Vai comer uma fruta? Adicione aveia ou linhaça. Vai comer um pão? Coloque um ovo ou queijo. Evite sucos coados (mesmo os naturais) e doces isolados, priorizando refeições completas. Fracionar a alimentação ajuda a evitar picos de glicose!"
+        elif is_has:
+            texto_especial = "Sua pressão arterial está exigindo um cuidado extra para garantir que os nutrientes e o oxigênio cheguem perfeitamente até o seu bebê. Vamos fazer ajustes simples na cozinha que farão toda a diferença. Esconda o saleiro da mesa e abuse de temperos naturais: alho, cebola, limão, orégano e cheiro-verde. É fundamental retirar da rotina os temperos em cubo, macarrão instantâneo, embutidos (salsicha, calabresa) e salgadinhos. Aumente o consumo de água, frutas e vegetais, pois eles contêm nutrientes que ajudam a relaxar os vasos sanguíneos!"
+
+        # Imprime o texto justificado com os acentos preservados
+        p_esp = Paragraph(texto_especial, estilo_justificado)
+        w_esp, h_esp = p_esp.wrap(175*mm, 60*mm)
+        y -= h_esp
+        p_esp.drawOn(c, 18*mm, y)
+    # =========================================================================
+
+    _rodape_pagina_mono(c, dados_g['nome'], 1)
+    c.showPage()
+
+    # ─── PÁGINA 2 — Gráfico Vetorial da Curva de Atalah ──────────────────────
+    y_graf = H - 30*mm
+    _cabecalho_pagina_mono(c, "Curva de Acompanhamento Nutricional")
+    
+    y_graf = _titulo_secao_mono(c, y_graf, "4. CURVA DE ESTADO NUTRICIONAL SEMANAL")
+    y_graf -= 5*mm
+    
+    c.setFont("Helvetica", 8)
+    c.setFillColor(CINZA_ESCURO)
+    c.drawString(15*mm, y_graf, "Acompanhe a evolução do seu IMC semana a semana para garantir uma gestação saudável.")
+    
+    y_graf -= 10*mm
+    
+    # ── DESENHO VETORIAL DA CURVA DE ATALAH ──
+    graf_x, graf_y = 20*mm, y_graf - 110*mm
+    graf_w, graf_h = 170*mm, 100*mm
+    
+    SEM_MIN, SEM_MAX = 6, 42
+    IMC_MIN, IMC_MAX = 18, 36 
+    
+    def to_pdf_coords(sem, imc):
+        x = graf_x + ((sem - SEM_MIN) / (SEM_MAX - SEM_MIN)) * graf_w
+        imc_clamped = max(IMC_MIN, min(imc, IMC_MAX)) 
+        y = graf_y + ((imc_clamped - IMC_MIN) / (IMC_MAX - IMC_MIN)) * graf_h
+        return x, y
+
+    c.setFillColor(BRANCO)
+    c.rect(graf_x, graf_y, graf_w, graf_h, fill=1, stroke=1)
+    c.setStrokeColor(CINZA_CLARO)
+    c.setLineWidth(0.1)
+    
+    c.setFont("Helvetica", 7)
+    c.setFillColor(CINZA_ESCURO)
+    for sem in range(SEM_MIN, SEM_MAX + 1, 2):
+        x, _ = to_pdf_coords(sem, IMC_MIN)
+        c.line(x, graf_y, x, graf_y + graf_h)
+        c.drawCentredString(x, graf_y - 4*mm, str(sem))
+    c.drawString(graf_x + graf_w/2, graf_y - 8*mm, "Semana Gestacional")
+
+    for imc in range(IMC_MIN, IMC_MAX + 1, 2):
+        _, y = to_pdf_coords(SEM_MIN, imc)
+        c.line(graf_x, y, graf_x + graf_w, y)
+        c.drawRightString(graf_x - 2*mm, y - 1*mm, str(imc))
+        
+    c.saveState()
+    c.rotate(90)
+    c.drawString(graf_y + graf_h/2, -(graf_x - 8*mm), "IMC Atual (kg/m2)")
+    c.restoreState()
+
+    tabela = res['tabela_atalah']
+    semanas_curva = list(range(SEM_MIN, SEM_MAX + 1))
+    
+    c.setLineWidth(1.0)
+    
+    c.setStrokeColor(PRETO_TEXTO) 
+    p_anterior = to_pdf_coords(SEM_MIN, tabela[SEM_MIN][0])
+    for sem in semanas_curva[1:]:
+        p_atual = to_pdf_coords(sem, tabela[sem][0])
+        c.line(p_anterior[0], p_anterior[1], p_atual[0], p_atual[1])
+        p_anterior = p_atual
+        
+    c.setStrokeColor(CINZA_ESCURO)
+    c.setDash(4, 2) 
+    p_anterior = to_pdf_coords(SEM_MIN, tabela[SEM_MIN][1])
+    for sem in semanas_curva[1:]:
+        p_atual = to_pdf_coords(sem, tabela[sem][1])
+        c.line(p_anterior[0], p_anterior[1], p_atual[0], p_atual[1])
+        p_anterior = p_atual
+        
+    c.setStrokeColor(CINZA_MEDIO)
+    c.setDash(1, 1) 
+    p_anterior = to_pdf_coords(SEM_MIN, tabela[SEM_MIN][2])
+    for sem in semanas_curva[1:]:
+        p_atual = to_pdf_coords(sem, tabela[sem][2])
+        c.line(p_anterior[0], p_anterior[1], p_atual[0], p_atual[1])
+        p_anterior = p_atual
+    c.setDash()
+
+    # Legenda com fundo ajustado (Mais larga para não vazar o texto)
+    leg_largura = 52*mm # Aumentado de 40mm para 52mm
+    leg_x, leg_y = graf_x + graf_w - leg_largura - 5*mm, graf_y + 5*mm
+    
+    _card_mono(c, leg_x, leg_y, leg_largura, 18*mm, cor_fundo=colors.white, cor_borda=CINZA_CLARO)
+    c.setFont("Helvetica-Bold", 7)
+    c.setFillColor(PRETO_TEXTO)
+    c.drawString(leg_x + 2*mm, leg_y + 14*mm, "LEGENDA")
+    
+    c.setLineWidth(0.8)
+    c.setStrokeColor(PRETO_TEXTO); c.line(leg_x + 2*mm, leg_y + 10*mm, leg_x + 10*mm, leg_y + 10*mm)
+    c.setFont("Helvetica", 6); c.setFillColor(CINZA_ESCURO); c.drawString(leg_x + 12*mm, leg_y + 9*mm, "Divisoria Baixo Peso / Normal")
+    
+    c.setStrokeColor(CINZA_ESCURO); c.setDash(3,1); c.line(leg_x + 2*mm, leg_y + 6*mm, leg_x + 10*mm, leg_y + 6*mm)
+    c.setDash(); c.drawString(leg_x + 12*mm, leg_y + 5*mm, "Divisoria Normal / Sobrepeso")
+    
+    c.setStrokeColor(CINZA_MEDIO); c.setDash(1,1); c.line(leg_x + 2*mm, leg_y + 2*mm, leg_x + 10*mm, leg_y + 2*mm)
+    c.setDash(); c.drawString(leg_x + 12*mm, leg_y + 1*mm, "Divisoria Sobrepeso / Obesidade")
+
+    x_pac, y_pac = to_pdf_coords(dados_g['semana'], res['imc_atual'])
+    
+    c.setStrokeColor(PRETO_TITULO)
+    c.setLineWidth(0.5)
+    c.setDash(2,2)
+    c.line(graf_x, y_pac, x_pac, y_pac) 
+    c.line(x_pac, graf_y, x_pac, y_pac) 
+    c.setDash()
+    
+    c.setStrokeColor(BRANCO)
+    c.setLineWidth(1.0)
+    c.setFillColor(PRETO_TITULO)
+    c.circle(x_pac, y_pac, 3*mm, fill=1, stroke=1)
+    
+    c.setFont("Helvetica-Bold", 9)
+    c.setFillColor(PRETO_TITULO)
+    c.drawCentredString(x_pac, y_pac + 5*mm, f"IMC {res['imc_atual']:.1f}")
+
+# ── SEÇÃO 5: O Espaço da Gestante (Desafios e Dificuldades) ──
+    # Posiciona a nova Seção 5 logo abaixo do gráfico de Atalah
+    y_desafios = graf_y - 20*mm
+    y_desafios = _titulo_secao_mono(c, y_desafios, "5. MEUS DESAFIOS E DIFICULDADES (Espaço da Paciente)")
+    y_desafios -= 4*mm
+    
+    c.setFont("Helvetica-BoldOblique", 9)
+    c.setFillColor(PRETO_TEXTO)
+    c.drawString(15*mm, y_desafios, "O que foi mais difícil de seguir na dieta ou nos conselhos que combinamos?")
+    
+    y_desafios -= 5*mm
+    c.setFont("Helvetica", 8.5)
+    c.setFillColor(CINZA_ESCURO)
+    c.drawString(15*mm, y_desafios, "Anote abaixo suas dúvidas e barreiras. Leve este papel na próxima consulta para buscarmos estratégias juntos!")
+
+    # Desenha linhas pontilhadas elegantes para a paciente escrever à mão em casa
+    y_linhas = y_desafios - 12*mm
+    c.setStrokeColor(CINZA_MEDIO)
+    c.setLineWidth(0.5)
+    c.setDash(1, 2) # Efeito pontilhado refinado
+    
+    # Aumentado para 5 linhas, já que removemos a tabela e temos mais espaço livre
+    for _ in range(6): 
+        c.line(15*mm, y_linhas, 195*mm, y_linhas)
+        y_linhas -= 9*mm
+        
+    c.setDash() # Reseta o efeito pontilhado para não afetar os próximos elementos
+
+    # Rodapé e fechamento do arquivo
+    _rodape_pagina_mono(c, dados_g['nome'], 2)
+    c.showPage()
     c.save()
+    return buf.getvalue()
+
+# ─── FUNÇÕES AUXILIARES MONOCROMÁTICAS (PRINT-FRIENDLY) ───
+
+def _tag_metrica_mono(c, x, y, larg, label, valor):
+    """Desenha um card de métrica profissional em tons de cinza."""
+    # Cores
+    PRETO_TITULO = colors.HexColor("#000000")
+    CINZA_ESCURO = colors.HexColor("#555555")
+    CINZA_BORDA = colors.HexColor("#DDDDDD")
+    BRANCO = colors.white
+    
+    # Fundo e Borda
+    c.setFillColor(BRANCO)
+    c.setStrokeColor(CINZA_BORDA)
+    c.setLineWidth(0.5)
+    c.roundRect(x, y, larg, 18*mm, 2*mm, fill=1, stroke=1)
+    
+    # Label (Título do Card)
+    c.setFont("Helvetica-Bold", 7)
+    c.setFillColor(CINZA_ESCURO)
+    c.drawString(x + 3*mm, y + 13*mm, label.upper())
+    
+    # Valor Principal
+    c.setFont("Helvetica-Bold", 13)
+    c.setFillColor(PRETO_TITULO)
+    c.drawCentredString(x + larg/2, y + 5*mm, valor)
+
+def _titulo_secao_mono(c, y, titulo):
+    """Desenha um título de seção padronizado em preto."""
+    PRETO_TITULO = colors.HexColor("#000000")
+    
+    c.setFont("Helvetica-Bold", 10)
+    c.setFillColor(PRETO_TITULO)
+    c.drawString(15*mm, y, titulo.upper())
+    
+    # Linha divisória fina
+    c.setStrokeColor(colors.black)
+    c.setLineWidth(0.3)
+    c.line(15*mm, y - 2*mm, 195*mm, y - 2*mm)
+    return y - 7*mm
+
+def _linha_info_mono(c, y, label, valor, fundo=False, cor_valor=None):
+    """Desenha uma linha de informação alternando fundo cinza claro."""
+    # Cores
+    PRETO_TEXTO = colors.HexColor("#222222")
+    CINZA_FUNDO = colors.HexColor("#EEEEEE")
+    CINZA_TEXTO = colors.HexColor("#555555")
+    BRANCO = colors.white
+    
+    alt_linha = 6*mm
+    if fundo:
+        c.setFillColor(CINZA_FUNDO)
+        c.rect(15*mm, y - 1*mm, 180*mm, alt_linha, fill=1, stroke=0)
+    
+    # Label
+    c.setFont("Helvetica", 9)
+    c.setFillColor(CINZA_TEXTO)
+    c.drawString(18*mm, y + 1*mm, label)
+    
+    # Valor
+    c.setFont("Helvetica-Bold", 9)
+    # Se uma cor específica de valor for passada (ex: Preto Titulo para Obesidade), usa ela.
+    if cor_valor:
+        c.setFillColor(cor_valor)
+    else:
+        c.setFillColor(PRETO_TEXTO)
+    c.drawRightString(192*mm, y + 1*mm, str(valor))
+    return y - alt_linha
+
+def _card_mono(c, x, y, larg, alt, cor_fundo=colors.white, cor_borda=colors.HexColor("#DDDDDD")):
+    """Desenha um card arredondado genérico em tons de cinza."""
+    c.setFillColor(cor_fundo)
+    c.setStrokeColor(cor_borda)
+    c.setLineWidth(0.5)
+    c.roundRect(x, y, larg, alt, 1*mm, fill=1, stroke=1)
+
+def _cabecalho_pagina_mono(c, titulo_pagina):
+    """Desenha o cabeçalho padronizado nas páginas subsequentes (Preto)."""
+    W, H = A4
+    PRETO_TITULO = colors.HexColor("#000000")
+    CINZA_ESCURO = colors.HexColor("#555555")
+    CINZA_FUNDO = colors.HexColor("#EEEEEE")
+    
+    # Faixa superior
+    c.setFillColor(CINZA_FUNDO)
+    c.rect(0, H - 20*mm, W, 20*mm, fill=1, stroke=0)
+    
+    # Logo / Identificação (Texto simulando logo para print-friendly)
+    c.setFillColor(PRETO_TITULO)
+    c.setFont("Helvetica-Bold", 10)
+    c.drawString(15*mm, H - 10*mm, "Buritis-RO | Saúde Nutricional")
+    
+    # Título da Página
+    c.setFillColor(CINZA_ESCURO)
+    c.setFont("Helvetica", 10)
+    c.drawRightString(195*mm, H - 10*mm, titulo_pagina)
+
+def _rodape_pagina_mono(c, nome_paciente, num_pagina):
+    """Desenha o rodapé monocromático padronizado."""
+    W, _ = A4
+    CINZA_ESCURO = colors.HexColor("#AAAAAA")
+    CINZA_CLARO = colors.HexColor("#DDDDDD")
+    
+    # Linha divisória
+    c.setStrokeColor(CINZA_CLARO)
+    c.setLineWidth(0.3)
+    c.line(15*mm, 15*mm, 195*mm, 15*mm)
+    
+    # Textos do rodapé
+    c.setFont("Helvetica", 7)
+    c.setFillColor(CINZA_ESCURO)
+    c.drawString(15*mm, 11*mm, f"Paciente: {_limpar(nome_paciente)}")
+    c.drawCentredString(W/2, 11*mm, "Gerado pelo Sistema NutriAPS | Buritis-RO")
+    c.drawRightString(195*mm, 11*mm, f"Página {num_pagina}")
+
+def _limpar(texto):
+    """Remove caracteres especiais que quebram o ReportLab."""
+    if not texto: return ""
+    import unicodedata
+    # Normaliza e remove acentos
+    texto_limpo = unicodedata.normalize('NFKD', str(texto)).encode('ASCII', 'ignore').decode('ASCII')
+    # Mantém apenas caracteres básicos e pontuação simples
+    caracteres_validos = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,()-_:\"'%/*+=_-"
+    return "".join(c for c in texto_limpo if c in caracteres_validos)
+
+def gerar_pdf_cardapio_ia(dados_paciente, texto_cardapio):
+    """
+    Versão Diamante: PDF estruturado com tabelas, design minimalista e cabeçalho fixo.
+    """
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import ParagraphStyle
+    from io import BytesIO
+    import re
+
+    buf = BytesIO()
+    W, H = A4
+    doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=15*mm, leftMargin=15*mm, topMargin=40*mm, bottomMargin=20*mm)
+    
+    # Estilos
+    estilo_titulo = ParagraphStyle('Titulo', fontSize=12, fontName='Helvetica-Bold', spaceAfter=10)
+    estilo_texto = ParagraphStyle('Corpo', fontSize=9, fontName='Helvetica', leading=12)
+
+    # Parsing simples: quebra o cardápio pelos blocos de refeição (ex: **Café da manhã**)
+    elementos = []
+    refeicoes = re.split(r'\*\*(.*?)\*\*', texto_cardapio)
+    
+    # Criar uma estrutura de tabela para o cardápio
+    dados_tabela = [["REFEIÇÃO", "SUGESTÕES DE CONSUMO"]]
+    
+    # Popula a tabela
+    for i in range(1, len(refeicoes), 2):
+        nome_refeicao = refeicoes[i]
+        conteudo = refeicoes[i+1].strip().replace('\n', '<br/>')
+        dados_tabela.append([Paragraph(f"<b>{nome_refeicao}</b>", estilo_texto), Paragraph(conteudo, estilo_texto)])
+
+    # Estilização Diamante da Tabela
+    tabela = Table(dados_tabela, colWidths=[45*mm, 135*mm])
+    tabela.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#1D361F")), # Verde Escuro
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#DDDDDD")),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor("#F9F9F9")]),
+        ('TOPPADDING', (0,0), (-1,-1), 8),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+        ('LEFTPADDING', (0,0), (-1,-1), 10),
+    ]))
+    
+    elementos.append(tabela)
+
+    # 4. GERAÇÃO COM CABEÇALHO PADRÃO
+    # Reutilizando a função _cabecalho_pagina_mono e _rodape_pagina_mono que você já tem
+    def canvas_padrao(canvas, doc):
+        _cabecalho_pagina_mono(canvas, "Plano Alimentar")
+        _rodape_pagina_mono(canvas, dados_paciente['nome'], doc.page)
+
+    doc.build(elementos, onFirstPage=canvas_padrao, onLaterPages=canvas_padrao)
+    
     return buf.getvalue()
