@@ -2,6 +2,7 @@ from nutri_calc import calcular_imc, calcular_necessidades_energeticas, extrair_
 from nutri_pdf import gerar_pdf_paciente
 from nutri_foods import carregar_tabela_alimentos
 from nutri_ia import gerar_cardapio_ia
+from nutri_calc import calcular_imc, calcular_necessidades_energeticas, extrair_ponto, calcular_classificacao_atalah
 
 import math
 import pandas as pd
@@ -204,41 +205,142 @@ with main_col_2:
 
     st.header("1. Dados do Paciente")
 
-    # Layout em cards para inputs
-    with st.container():
-        col1, col2 = st.columns(2)
-        with col1:
-            nome = st.text_input("Nome Completo", placeholder="Ex: Maria da Silva")
-            idade = st.number_input("Idade (anos)", min_value=0, max_value=120, value=30, step=1)
-            sexo = st.selectbox("Sexo biológico", ["Feminino", "Masculino"])
-        with col2:
-            peso = st.number_input("Peso (kg)", min_value=1.0, max_value=300.0, value=70.0, step=0.5)
-            altura = st.number_input("Altura (cm)", min_value=50, max_value=230, value=170, step=1)
-            atividade = st.selectbox(
-                "Nível de Atividade Física",
-                [
-                    "Sedentário (sem exercício / trabalho sentado)",
-                    "Leve (caminhada ou exercício leve 1-3x/sem)",
-                    "Moderado (exercício 3-5x/sem)",
-                    "Intenso (exercício pesado 6-7x/sem)",
-                    "Muito Intenso (atleta / trabalho físico pesado)",
-                ]
-            )
+    # Seleção de Perfil Clínico no padrão SaaS minimalista
+    perfil_clinico = st.radio(
+        "Tipo de Atendimento:",
+        ["👤 População Geral", "🤰 Pré-Natal (Gestante)"],
+        horizontal=True,
+        key="perfil_clinico_seletor"
+    )
+    st.markdown("<br>", unsafe_allow_html=True)
 
-    if altura > 0:
-        imc_rt = peso / ((altura / 100) ** 2)
-        if imc_rt < 18.5:   classif_rt = "Magreza"
-        elif imc_rt < 25:   classif_rt = "Eutrofia ✓"
-        elif imc_rt < 30:   classif_rt = "Sobrepeso"
-        elif imc_rt < 35:   classif_rt = "Obesidade Grau I"
-        elif imc_rt < 40:   classif_rt = "Obesidade Grau II"
-        else:               classif_rt = "Obesidade Grau III"
-        
-        st.markdown(f"""
-            <div style="background-color: #859B48; color: white; padding: 15px; border-radius: 12px; margin-top: 15px; text-align: center;">
-                <strong>IMC ATUAL:</strong> {imc_rt:.1f} kg/m² &nbsp; | &nbsp; <strong>Classificação:</strong> {classif_rt}
+    if perfil_clinico == "👤 População Geral":
+        with st.container():
+            col1, col2 = st.columns(2)
+            with col1:
+                nome = st.text_input("Nome Completo", placeholder="Ex: Maria da Silva")
+                idade = st.number_input("Idade (anos)", min_value=0, max_value=120, value=30, step=1)
+                sexo = st.selectbox("Sexo biológico", ["Feminino", "Masculino"])
+            with col2:
+                peso = st.number_input("Peso (kg)", min_value=1.0, max_value=300.0, value=70.0, step=0.5)
+                altura = st.number_input("Altura (cm)", min_value=50, max_value=230, value=170, step=1)
+                atividade = st.selectbox(
+                    "Nível de Atividade Física",
+                    [
+                        "Sedentário (sem exercício / trabalho sentado)",
+                        "Leve (caminhada ou exercício leve 1-3x/sem)",
+                        "Moderado (exercício 3-5x/sem)",
+                        "Intenso (exercício pesado 6-7x/sem)",
+                        "Muito Intenso (atleta / trabalho físico pesado)",
+                    ]
+                )
+
+        if altura > 0:
+            imc_rt = peso / ((altura / 100) ** 2)
+            if imc_rt < 18.5:   classif_rt = "Magreza"
+            elif imc_rt < 25:   classif_rt = "Eutrofia ✓"
+            elif imc_rt < 30:   classif_rt = "Sobrepeso"
+            elif imc_rt < 35:   classif_rt = "Obesidade Grau I"
+            elif imc_rt < 40:   classif_rt = "Obesidade Grau II"
+            else:               classif_rt = "Obesidade Grau III"
+            
+            st.markdown(f"""
+                <div style="background-color: #859B48; color: white; padding: 15px; border-radius: 12px; margin-top: 15px; text-align: center;">
+                    <strong>IMC ATUAL:</strong> {imc_rt:.1f} kg/m² &nbsp; | &nbsp; <strong>Classificação:</strong> {classif_rt}
+                </div>
+            """, unsafe_allow_html=True)
+            
+    else:
+        # MÓDULO OBSTÉTRICO - ATALAH (1997) COM OPCIONAL PRÉ-GESTACIONAL
+        with st.container():
+            col1, col2 = st.columns(2)
+            with col1:
+                nome = st.text_input("Nome Completo da Gestante", placeholder="Ex: Maria da Silva")
+                idade = st.number_input("Idade (anos)", min_value=10, max_value=60, value=25, step=1)
+                
+                # Divisão em duas subcolunas para Semanas e Dias lado a lado
+                col_sub_sem, col_sub_dias = st.columns(2)
+                with col_sub_sem:
+                    ig_semanas = st.number_input("Idade Gestacional (Semanas)", min_value=6, max_value=42, value=20, step=1)
+                with col_sub_dias:
+                    ig_dias = st.number_input("Dias (Opcional)", min_value=0, max_value=6, value=0, step=1)
+                
+                # Regra de arredondamento: 4 a 6 dias arredonda para a próxima semana
+                semana_gestacional = ig_semanas + 1 if ig_dias >= 4 else ig_semanas
+                
+            with col2:
+                altura = st.number_input("Altura (cm)", min_value=100, max_value=220, value=160, step=1)
+                peso_atual = st.number_input("Peso Atual na Consulta (kg)", min_value=30.0, max_value=250.0, value=64.0, step=0.1)
+                peso_pre_input = st.number_input("Peso Pré-Gestacional (kg) [Opcional - Deixe 0.0 se não souber]", min_value=0.0, max_value=200.0, value=0.0, step=0.1)
+            
+            # Evita quebras no restante do sistema definindo variáveis globais
+            peso = peso_atual
+            sexo = "Feminino"
+            atividade = "Sedentário (sem exercício / trabalho sentado)"
+            
+        if altura > 0 and peso_atual > 0:
+            # Enviamos o peso_pre_input para a nossa nova função analítica
+            res_gest = calcular_classificacao_atalah(peso_atual, altura, semana_gestacional, peso_pre_input)
+            
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            # EXIBIÇÃO DINÂMICA DE CARDS: Se informou o peso pré-gestacional, exibe bloco com 4 colunas
+            if peso_pre_input > 0.0:
+                m1, m2, m3, m4 = st.columns(4)
+                with m1:
+                    st.metric("IMC Atual", f"{res_gest['imc_atual']:.1f} kg/m²")
+                with m2:
+                    st.metric("Classificação (Atalah)", res_gest['classificacao_atual'])
+                with m3:
+                    st.metric("Ganho Real até Aqui (GPG)", f"{res_gest['gpg']:.1f} kg")
+                with m4:
+                    st.metric("Meta de Ganho Total", f"{res_gest['ganho_min']} a {res_gest['ganho_max']} kg", help="Meta oficial baseada no IMC Pré-Gestacional.")
+            else:
+                # Se não informou, exibe apenas as 3 métricas essenciais sem quebrar o layout
+                m1, m2, m3 = st.columns(3)
+                with m1:
+                    st.metric("IMC Atual", f"{res_gest['imc_atual']:.1f} kg/m²")
+                with m2:
+                    st.metric("Classificação (Atalah)", res_gest['classificacao_atual'])
+                with m3:
+                    st.metric("Meta de Ganho Total*", f"{res_gest['ganho_min']} a {res_gest['ganho_max']} kg", help="Meta estimada através do IMC atual da semana.")
+
+            laudo_gest_html = f"""
+            <div class="laudo-box" style="border-top-color: #859B48; background-color: #FFFFFF;">
+                <h3 style="color: #1D361F; margin-top: 0;">Diagnóstico Obstétrico</h3>
+                <p style="margin-bottom:8px;"><strong>Estado Nutricional Atual: <span style="color:#859B48;">{res_gest['classificacao_atual']}</span></strong></p>
+                <p style="line-height:1.6; font-style: italic; color: #555;">"{res_gest['diagnostico']}"</p>
+                <hr style="margin: 12px 0; border-top: 1px solid #C4C7B6;">
+                <h3 style="color: #859B48; margin-top: 0; font-size: 1.1rem;">Conduta e Orientação</h3>
+                <p style="line-height:1.6; color: #1D361F;">{res_gest['conselho']}</p>
             </div>
-        """, unsafe_allow_html=True)
+            """
+            st.markdown(laudo_gest_html, unsafe_allow_html=True)
+            
+            st.markdown("<br>### 📈 Curva de Atalah (1997) - Estado Nutricional Atual", unsafe_allow_html=True)
+            import plotly.graph_objects as go
+            
+            semanas_eixo = list(range(6, 43))
+            baixo_lim = [res_gest['tabela_atalah'][s][0] for s in semanas_eixo]
+            eutrofia_lim = [res_gest['tabela_atalah'][s][1] for s in semanas_eixo]
+            sobrepeso_lim = [res_gest['tabela_atalah'][s][2] for s in semanas_eixo]
+            
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=semanas_eixo, y=baixo_lim, line=dict(color='#859B48', width=2), name="Adequado (Mínimo)"))
+            fig.add_trace(go.Scatter(x=semanas_eixo, y=eutrofia_lim, fill='tonexty', fillcolor='rgba(133, 155, 72, 0.2)', line=dict(color='#D97706', width=2), name="Adequado (Máximo)"))
+            fig.add_trace(go.Scatter(x=semanas_eixo, y=sobrepeso_lim, fill='tonexty', fillcolor='rgba(217, 119, 6, 0.1)', line=dict(color='#DC2626', width=2, dash='dash'), name="Sobrepeso (Máximo)"))
+            fig.add_trace(go.Scatter(x=[semana_gestacional], y=[res_gest['imc_atual']], mode='markers+text', text=["📍 IMC Atual"], textposition="top center", marker=dict(color='#1D361F', size=14, line=dict(color='#FFFFFF', width=2)), name="Visita Atual", showlegend=False))
+            
+            fig.update_layout(
+                paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='#F7F3F0', font=dict(color='#1D361F'), xaxis_title="Semana Gestacional", yaxis_title="IMC Atual (kg/m²)",
+                margin=dict(l=40, r=40, t=40, b=40), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+            )
+            st.plotly_chart(fig)
+            
+            st.session_state["dados_paciente"] = {
+                "nome": nome, "idade": idade, "sexo": "Feminino", "peso": float(peso_atual), "altura": float(altura),
+                "is_gestante": True, "semana": semana_gestacional, "res_gest": res_gest
+            }
 
     st.markdown("---")
 
@@ -363,12 +465,29 @@ with main_col_2:
 
         st.subheader(f"Plano Estratégico: {dados['nome']}")
         c1, c2, c3 = st.columns(3)
-        c1.metric("GET Estimado", f"{dados['get']:.0f} kcal")
-        c2.metric("Peso Atual", f"{dados['peso']:.1f} kg")
-        c3.metric("Meta de IMC", f"{dados['imc']:.1f}")
 
+        # --- BIFURCAÇÃO INTELIGENTE: GESTANTE VS POPULAÇÃO GERAL ---
+        is_gestante = dados.get("is_gestante", False)
+
+        if is_gestante:
+            res = dados["res_gest"]
+            c1.metric("Idade Gestacional", f"{dados['semana']} Semanas")
+            c2.metric("Peso Atual", f"{dados['peso']:.1f} kg")
+            c3.metric("IMC Atual", f"{res['imc_atual']:.1f} kg/m²")
+            
+            # Valor base de segurança para gestantes (já que não calculamos GET)
+            get_base = 2000.0 
+        else:
+            c1.metric("GET Estimado", f"{dados['get']:.0f} kcal")
+            c2.metric("Peso Atual", f"{dados['peso']:.1f} kg")
+            c3.metric("IMC Atual", f"{dados['imc']:.1f}")
+            
+            # Valor base para população geral é o próprio GET
+            get_base = float(dados["get"])
+
+        # --- CONFIGURAÇÃO DE ENERGIA ---
         if "kcal_alvo" not in st.session_state:
-            st.session_state["kcal_alvo"] = float(dados["get"])
+            st.session_state["kcal_alvo"] = get_base
 
         # Sessão de energia com layout melhorado
         with st.container():
@@ -379,8 +498,9 @@ with main_col_2:
             with e_col2:
                 st.write("")
                 st.write("")
-                if st.button("Resetar p/ GET"):
-                    st.session_state["kcal_alvo"] = float(dados["get"])
+                # Botão adaptado para servir tanto para GET quanto para a Base da Gestante
+                if st.button("Resetar p/ Valor Base"):
+                    st.session_state["kcal_alvo"] = get_base
                     st.rerun()
 
         get = st.session_state["kcal_alvo"]
