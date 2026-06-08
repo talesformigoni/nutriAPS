@@ -121,8 +121,119 @@ def _linha_info(c, y, label, valor, fundo=False):
 def gerar_pdf_paciente(nome, idade, sexo, peso, altura, imc, classif_imc,
                        tmb, get, formula_nome, risco, explicacao, respostas_hab):
 
+    # Verifica de forma segura se é gestante acessando o session_state do app
+    import streamlit as st
+    is_gestante = False
+    if "dados_paciente" in st.session_state and st.session_state["dados_paciente"].get("is_gestante"):
+        is_gestante = True
+        dados_g = st.session_state["dados_paciente"]
+
     meses = ["", "janeiro", "fevereiro", "março", "abril", "maio", "junho", 
                 "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"]
+    hoje = datetime.datetime.now()
+    data_formatada = f"Gerado em {hoje.day:02d} de {meses[hoje.month]} de {hoje.year}"
+
+    buf = BytesIO()
+    c = canvas.Canvas(buf, pagesize=A4)
+
+    # ─── PÁGINA 1 — Capa + Identificação ─────────────────────────────────
+    c.setFillColor(AZUL_ESCURO)
+    c.rect(0, H - 75*mm, W, 75*mm, fill=1, stroke=0)
+    c.setFillColor(AZUL_MEDIO)
+    c.rect(0, H - 78*mm, W, 4*mm, fill=1, stroke=0)
+
+    c.setFillColor(BRANCO)
+    c.setFont("Helvetica-Bold", 22)
+    c.drawString(15*mm, H - 30*mm, "Mapa de Saúde Nutricional")
+
+    c.setFont("Helvetica", 11)
+    c.setFillColor(colors.HexColor("#DDDDDD"))
+    c.drawString(15*mm, H - 40*mm, "Prefeitura de Buritis-RO | Secretaria Municipal de Saúde")
+    if is_gestante:
+        c.drawString(15*mm, H - 45*mm, "Atenção Primária à Saúde | Linha de Cuidado da Gestante")
+    else:
+        c.drawString(15*mm, H - 45*mm, "Atenção Primária à Saúde | Departamento de Nutrição")
+
+    c.setFillColor(BRANCO)
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(15*mm, H - 55*mm, _limpar(nome))
+    c.setFont("Helvetica", 10)
+    c.setFillColor(colors.HexColor("#CCCCCC"))
+    c.drawString(15*mm, H - 63*mm, data_formatada)
+
+    larg_card = 50*mm
+    if is_gestante:
+        # Troca os cards do topo para dados obstétricos
+        _tag_metrica(c, 15*mm,   H - 99*mm, larg_card, "Idade Gestacional", f"{dados_g['semana']} Semanas")
+        _tag_metrica(c, 70*mm,   H - 99*mm, larg_card, "Ganho de Peso (GPG)", f"{dados_g['res_gest']['gpg']:.1f} kg")
+        _tag_metrica(c, 125*mm,  H - 99*mm, larg_card, "IMC Pré-Gest.", f"{dados_g['res_gest']['imc_pre']:.1f}")
+        
+        _card(c, 125*mm, H - 108*mm, larg_card, 7*mm, cor_fundo=VERDE)
+        c.setFillColor(BRANCO)
+        c.setFont("Helvetica-Bold", 8)
+        c.drawCentredString(125*mm + larg_card/2, H - 105*mm, _limpar(dados_g['res_gest']['classificacao_pre']))
+    else:
+        # Mantém o fluxo normal para população geral
+        _tag_metrica(c, 15*mm,   H - 99*mm, larg_card, "Metabolismo Basal", f"{tmb:.0f} kcal")
+        _tag_metrica(c, 70*mm,   H - 99*mm, larg_card, "Gasto Diário Total", f"{get:.0f} kcal")
+        _tag_metrica(c, 125*mm,  H - 99*mm, larg_card, "IMC", f"{imc:.1f}",
+                     cor=_cor_risco("Baixo") if imc < 25 else _cor_risco("Moderado") if imc < 30 else _cor_risco("Alto"))
+        cor_imc = (_cor_risco("Baixo") if imc < 25 else _cor_risco("Moderado") if imc < 30 else _cor_risco("Alto"))
+        _card(c, 125*mm, H - 108*mm, larg_card, 7*mm, cor_fundo=cor_imc)
+        c.setFillColor(BRANCO)
+        c.setFont("Helvetica-Bold", 8)
+        c.drawCentredString(125*mm + larg_card/2, H - 105*mm, _limpar(classif_imc))
+
+    # ── Seção Identificação ──
+    y = H - 118*mm
+    y = _titulo_secao(c, y, "1. IDENTIFICAÇÃO do Paciente")
+    y = _linha_info(c, y, "Nome:", nome, fundo=True)
+    y = _linha_info(c, y, "Data:", datetime.datetime.now().strftime("%d/%m/%Y"), fundo=False)
+    y = _linha_info(c, y, "Idade:", f"{idade} anos", fundo=True)
+    
+    if is_gestante:
+            y = _linha_info(c, y, "Idade Gestacional:", f"{dados_g['semana']} semanas", fundo=False)
+            y = _linha_info(c, y, "Peso Atual:", f"{dados_g['peso']:.1f} kg", fundo=True)
+            y = _linha_info(c, y, "IMC Atual:", f"{dados_g['res_gest']['imc_atual']:.1f} kg/m2", fundo=False)
+            y = _linha_info(c, y, "Classificação (Atalah):", f"{dados_g['res_gest']['classificacao_atual']}", fundo=True)
+            y -= 8*mm
+            
+            y = _titulo_secao(c, y, "2. Diretrizes do Pré-Natal", cor=AZUL_MEDIO)
+            y -= 2*mm
+            c.setFont("Helvetica", 9)
+            c.setFillColor(CINZA_TEXTO)
+            linhas_g = [
+                f"Diagnóstico de Atalah (1997): {dados_g['res_gest']['classificacao_atual']}",
+                f"Ganho de peso total recomendado: {dados_g['res_gest']['ganho_min']} a {dados_g['res_gest']['ganho_max']} kg",
+                "",
+                "O acompanhamento do IMC semana a semana visa prevenir intercorrências",
+                "garantindo o crescimento intrauterino ideal do feto e a saúde materna."
+            ]
+            for linha in linhas_g:
+                c.drawString(18*mm, y, linha)
+                y -= 6*mm
+    else:
+        y = _linha_info(c, y, "Sexo:", sexo, fundo=False)
+        y = _linha_info(c, y, "Peso:", f"{peso} kg", fundo=True)
+        y = _linha_info(c, y, "Altura:", f"{altura} cm", fundo=False)
+        y = _linha_info(c, y, "IMC:", f"{imc:.1f} kg/m2  —  {_limpar(classif_imc)}", fundo=True)
+        y -= 8*mm
+
+        y = _titulo_secao(c, y, "2. Seus Gastos de Energia", cor=AZUL_MEDIO)
+        y -= 2*mm
+        c.setFont("Helvetica", 9)
+        c.setFillColor(CINZA_TEXTO)
+        linhas_energia = [
+            f"Fórmula utilizada: {_limpar(formula_nome)}",
+            f"Metabolismo basal (repouso total): {tmb:.0f} kcal/dia",
+            f"Gasto energético total (com sua rotina): {get:.0f} kcal/dia",
+            "",
+            "Este é o valor que seu corpo precisa para manter o peso atual.",
+            "Comer acima desse valor tende ao ganho de peso; abaixo, à perda gradual.",
+        ]
+        for linha in linhas_energia:
+            c.drawString(18*mm, y, linha)
+            y -= 6*mm
     hoje = datetime.datetime.now()
     data_formatada = f"Gerado em {hoje.day:02d} de {meses[hoje.month]} de {hoje.year}"
 
