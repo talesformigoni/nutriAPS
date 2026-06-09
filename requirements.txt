@@ -1,6 +1,6 @@
 streamlit
 pandas
-fpdf
 plotly
+groq
 reportlab
-google-genai
+fpdf
