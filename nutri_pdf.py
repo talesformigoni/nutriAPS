@@ -927,3 +927,61 @@ def _limpar(texto):
     # Mantém apenas caracteres básicos e pontuação simples
     caracteres_validos = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 .,()-_:\"'%/*+=_-"
     return "".join(c for c in texto_limpo if c in caracteres_validos)
+
+def gerar_pdf_cardapio_ia(dados_paciente, texto_cardapio):
+    """
+    Versão Diamante: PDF estruturado com tabelas, design minimalista e cabeçalho fixo.
+    """
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+    from reportlab.lib.styles import ParagraphStyle
+    from io import BytesIO
+    import re
+
+    buf = BytesIO()
+    W, H = A4
+    doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=15*mm, leftMargin=15*mm, topMargin=40*mm, bottomMargin=20*mm)
+    
+    # Estilos
+    estilo_titulo = ParagraphStyle('Titulo', fontSize=12, fontName='Helvetica-Bold', spaceAfter=10)
+    estilo_texto = ParagraphStyle('Corpo', fontSize=9, fontName='Helvetica', leading=12)
+
+    # Parsing simples: quebra o cardápio pelos blocos de refeição (ex: **Café da manhã**)
+    elementos = []
+    refeicoes = re.split(r'\*\*(.*?)\*\*', texto_cardapio)
+    
+    # Criar uma estrutura de tabela para o cardápio
+    dados_tabela = [["REFEIÇÃO", "SUGESTÕES DE CONSUMO"]]
+    
+    # Popula a tabela
+    for i in range(1, len(refeicoes), 2):
+        nome_refeicao = refeicoes[i]
+        conteudo = refeicoes[i+1].strip().replace('\n', '<br/>')
+        dados_tabela.append([Paragraph(f"<b>{nome_refeicao}</b>", estilo_texto), Paragraph(conteudo, estilo_texto)])
+
+    # Estilização Diamante da Tabela
+    tabela = Table(dados_tabela, colWidths=[45*mm, 135*mm])
+    tabela.setStyle(TableStyle([
+        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#1D361F")), # Verde Escuro
+        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
+        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
+        ('VALIGN', (0,0), (-1,-1), 'TOP'),
+        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#DDDDDD")),
+        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor("#F9F9F9")]),
+        ('TOPPADDING', (0,0), (-1,-1), 8),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 8),
+        ('LEFTPADDING', (0,0), (-1,-1), 10),
+    ]))
+    
+    elementos.append(tabela)
+
+    # 4. GERAÇÃO COM CABEÇALHO PADRÃO
+    # Reutilizando a função _cabecalho_pagina_mono e _rodape_pagina_mono que você já tem
+    def canvas_padrao(canvas, doc):
+        _cabecalho_pagina_mono(canvas, "Plano Alimentar")
+        _rodape_pagina_mono(canvas, dados_paciente['nome'], doc.page)
+
+    doc.build(elementos, onFirstPage=canvas_padrao, onLaterPages=canvas_padrao)
+    
+    return buf.getvalue()
