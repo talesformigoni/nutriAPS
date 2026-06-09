@@ -20,6 +20,10 @@ st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     html, body, [class*="st-"] { font-family: 'Inter', sans-serif !important; color: #1D361F !important; }
+    /* --- FIX DO MENU LATERAL (Protege os ícones do Streamlit) --- */
+    i, .material-symbols-rounded, [data-testid="stSidebarCollapseButton"] span, [data-testid="stSidebarCollapseButton"] svg { 
+    font-family: "Material Symbols Rounded", "Material Icons" !important; 
+    }
     .main { background-color: #ECE5DF !important; padding: 2rem !important; }
     [data-testid="stAppViewContainer"] { background-color: #ECE5DF !important; }
     [data-testid="stSidebar"] { background-color: #DFC8B6 !important; border-right: 1px solid #C4C7B6; }

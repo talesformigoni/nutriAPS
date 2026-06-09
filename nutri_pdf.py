@@ -930,58 +930,136 @@ def _limpar(texto):
 
 def gerar_pdf_cardapio_ia(dados_paciente, texto_cardapio):
     """
-    Versão Diamante: PDF estruturado com tabelas, design minimalista e cabeçalho fixo.
+    Gera o PDF do Cardápio no estilo "Cards de Refeição" (Padrão Dietbox),
+    otimizado para impressão em Preto e Branco / Tons de Cinza.
     """
     from reportlab.lib.pagesizes import A4
     from reportlab.lib import colors
-    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
-    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, HRFlowable
+    from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+    from reportlab.lib.units import mm
     from io import BytesIO
+    import datetime
     import re
 
     buf = BytesIO()
-    W, H = A4
-    doc = SimpleDocTemplate(buf, pagesize=A4, rightMargin=15*mm, leftMargin=15*mm, topMargin=40*mm, bottomMargin=20*mm)
     
-    # Estilos
-    estilo_titulo = ParagraphStyle('Titulo', fontSize=12, fontName='Helvetica-Bold', spaceAfter=10)
-    estilo_texto = ParagraphStyle('Corpo', fontSize=9, fontName='Helvetica', leading=12)
+    # Configuração do documento (Margens confortáveis)
+    doc = SimpleDocTemplate(
+        buf, pagesize=A4, rightMargin=15*mm, leftMargin=15*mm, 
+        topMargin=15*mm, bottomMargin=15*mm
+    )
 
-    # Parsing simples: quebra o cardápio pelos blocos de refeição (ex: **Café da manhã**)
     elementos = []
+    
+    # --- ESTILOS DE TEXTO ---
+    styles = getSampleStyleSheet()
+    
+    estilo_titulo = ParagraphStyle(
+        'Titulo', fontName='Helvetica-Bold', fontSize=14, 
+        textColor=colors.HexColor("#000000"), alignment=1, spaceAfter=4
+    )
+    estilo_subtitulo = ParagraphStyle(
+        'Subtitulo', fontName='Helvetica', fontSize=10, 
+        textColor=colors.HexColor("#555555"), alignment=1, spaceAfter=2
+    )
+    estilo_data = ParagraphStyle(
+        'Data', fontName='Helvetica', fontSize=9, 
+        textColor=colors.HexColor("#777777"), alignment=1, spaceAfter=10
+    )
+    
+    # Estilos de dentro do Card
+    estilo_card_header = ParagraphStyle(
+        'CardHeader', fontName='Helvetica-Bold', fontSize=11, 
+        textColor=colors.white, textTransform='uppercase'
+    )
+    estilo_card_body = ParagraphStyle(
+        'CardBody', fontName='Helvetica', fontSize=10, 
+        textColor=colors.HexColor("#222222"), leading=16 # leading = espaçamento entre linhas
+    )
+
+    # --- 1. CABEÇALHO GERAL DO DOCUMENTO ---
+    nome_paciente = dados_paciente.get('nome', 'Paciente não informado')
+    hoje = datetime.datetime.now().strftime("%d/%m/%Y")
+
+    elementos.append(Paragraph("Plano Alimentar", estilo_titulo))
+    elementos.append(Paragraph(nome_paciente, estilo_subtitulo))
+    elementos.append(Paragraph(hoje, estilo_data))
+    
+    # Linha divisória fina
+    elementos.append(HRFlowable(width="100%", thickness=0.5, color=colors.HexColor("#CCCCCC"), spaceBefore=5, spaceAfter=10))
+    
+    elementos.append(Paragraph("Todos os dias", estilo_subtitulo))
+    elementos.append(Paragraph(f"Plano alimentar para {nome_paciente}", estilo_subtitulo))
+    elementos.append(Spacer(1, 15*mm))
+
+    # --- 2. PROCESSAMENTO E CRIAÇÃO DOS CARDS DE REFEIÇÃO ---
+    # O regex divide o texto usando os **asteriscos** das refeições
     refeicoes = re.split(r'\*\*(.*?)\*\*', texto_cardapio)
     
-    # Criar uma estrutura de tabela para o cardápio
-    dados_tabela = [["REFEIÇÃO", "SUGESTÕES DE CONSUMO"]]
-    
-    # Popula a tabela
+    # A lista 'refeicoes' fica assim: ['', 'Café da manhã', 'texto do café...', 'Almoço', 'texto...']
     for i in range(1, len(refeicoes), 2):
-        nome_refeicao = refeicoes[i]
-        conteudo = refeicoes[i+1].strip().replace('\n', '<br/>')
-        dados_tabela.append([Paragraph(f"<b>{nome_refeicao}</b>", estilo_texto), Paragraph(conteudo, estilo_texto)])
+        nome_refeicao = refeicoes[i].strip()
+        conteudo_refeicao = refeicoes[i+1].strip()
+        
+        # Ignora blocos vazios
+        if not conteudo_refeicao:
+            continue
+            
+        # Converte as quebras de linha em <br/> para o Paragraph entender
+        conteudo_html = conteudo_refeicao.replace('\n', '<br/>')
+        
+        # Monta os dados da tabela (Card)
+        # Linha 0: Cabeçalho (Ex: Café da Manhã)
+        # Linha 1: Conteúdo (Alimentos)
+        dados_card = [
+            [Paragraph(nome_refeicao, estilo_card_header)],
+            [Paragraph(conteudo_html, estilo_card_body)]
+        ]
+        
+        # Cria a tabela simulando um Card
+        card = Table(dados_card, colWidths=[180*mm])
+        
+        # PALETA MONOCROMÁTICA PRINT-FRIENDLY
+        COR_FUNDO_HEADER = colors.HexColor("#4F4F4F") # Cinza Chumbo
+        COR_FUNDO_BODY = colors.HexColor("#F7F7F7")   # Cinza Gelo (gasta pouquíssima tinta)
+        COR_BORDA = colors.HexColor("#E0E0E0")        # Cinza claro para borda
+        
+        card.setStyle(TableStyle([
+            # Estilo do Cabeçalho da Refeição
+            ('BACKGROUND', (0,0), (0,0), COR_FUNDO_HEADER),
+            ('TEXTCOLOR', (0,0), (0,0), colors.white),
+            ('TOPPADDING', (0,0), (0,0), 6),
+            ('BOTTOMPADDING', (0,0), (0,0), 6),
+            ('LEFTPADDING', (0,0), (0,0), 12),
+            ('RIGHTPADDING', (0,0), (0,0), 12),
+            ('VALIGN', (0,0), (0,0), 'MIDDLE'),
+            
+            # Estilo do Corpo da Refeição (Alimentos)
+            ('BACKGROUND', (0,1), (0,1), COR_FUNDO_BODY),
+            ('TOPPADDING', (0,1), (0,1), 12),
+            ('BOTTOMPADDING', (0,1), (0,1), 12),
+            ('LEFTPADDING', (0,1), (0,1), 12),
+            ('RIGHTPADDING', (0,1), (0,1), 12),
+            
+            # Borda ao redor do card inteiro
+            ('BOX', (0,0), (-1,-1), 1, COR_BORDA),
+        ]))
+        
+        elementos.append(card)
+        elementos.append(Spacer(1, 8*mm)) # Espaço entre um card e outro
 
-    # Estilização Diamante da Tabela
-    tabela = Table(dados_tabela, colWidths=[45*mm, 135*mm])
-    tabela.setStyle(TableStyle([
-        ('BACKGROUND', (0,0), (-1,0), colors.HexColor("#1D361F")), # Verde Escuro
-        ('TEXTCOLOR', (0,0), (-1,0), colors.white),
-        ('ALIGN', (0,0), (-1,-1), 'LEFT'),
-        ('VALIGN', (0,0), (-1,-1), 'TOP'),
-        ('GRID', (0,0), (-1,-1), 0.5, colors.HexColor("#DDDDDD")),
-        ('ROWBACKGROUNDS', (0,1), (-1,-1), [colors.white, colors.HexColor("#F9F9F9")]),
-        ('TOPPADDING', (0,0), (-1,-1), 8),
-        ('BOTTOMPADDING', (0,0), (-1,-1), 8),
-        ('LEFTPADDING', (0,0), (-1,-1), 10),
-    ]))
-    
-    elementos.append(tabela)
+    # 3. RODAPÉ FIXO (Numerador de página)
+    def desenhar_rodape(canvas, doc):
+        canvas.saveState()
+        W, H = A4
+        canvas.setFont("Helvetica", 8)
+        canvas.setFillColor(colors.HexColor("#AAAAAA"))
+        canvas.drawString(15*mm, 10*mm, "Gerado pelo Sistema NutriAPS | Buritis-RO")
+        canvas.drawRightString(W - 15*mm, 10*mm, f"Página {doc.page}")
+        canvas.restoreState()
 
-    # 4. GERAÇÃO COM CABEÇALHO PADRÃO
-    # Reutilizando a função _cabecalho_pagina_mono e _rodape_pagina_mono que você já tem
-    def canvas_padrao(canvas, doc):
-        _cabecalho_pagina_mono(canvas, "Plano Alimentar")
-        _rodape_pagina_mono(canvas, dados_paciente['nome'], doc.page)
-
-    doc.build(elementos, onFirstPage=canvas_padrao, onLaterPages=canvas_padrao)
+    # Gera o PDF final
+    doc.build(elementos, onFirstPage=desenhar_rodape, onLaterPages=desenhar_rodape)
     
     return buf.getvalue()
