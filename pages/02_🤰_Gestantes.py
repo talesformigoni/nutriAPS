@@ -5,7 +5,7 @@ import datetime
 import plotly.express as px
 import plotly.graph_objects as go
 
-from nutri_calc import extrair_ponto, avaliar_gestante_ms2026
+from nutri_calc import avaliar_gestante_ms2026
 from nutri_pdf import gerar_pdf_gestante
 from nutri_ia import gerar_cardapio_ia
 
