@@ -150,3 +150,118 @@ def calcular_classificacao_atalah(peso_atual, altura_cm, semana, peso_pre=0.0):
         "conselho": conselho,
         "tabela_atalah": tabela_atalah
     }
+
+def avaliar_gestante_ms2026(peso_atual, altura_cm, semana, peso_pre=0.0, pdf_mode=False):
+    """
+    Avaliação exata baseada na Tabela Oficial do MS 2026 (Kac et al. 2021).
+    Sem interpolação: arrays com valores semana a semana exatos.
+    """
+    altura_m = altura_cm / 100.0
+
+    is_peso_estimado = False
+    if peso_pre <= 0.0:
+        peso_base = peso_atual
+        if semana > 13:
+            is_peso_estimado = True
+    else:
+        peso_base = peso_pre
+
+    imc_pre = peso_base / (altura_m ** 2)
+    imc_atual = peso_atual / (altura_m ** 2)
+    ganho_atual = peso_atual - peso_base
+
+    DADOS_MS = {
+        "Baixo Peso": {
+            "limite_imc": "IMC < 18,5 kg/m²",
+            "rec_ganho": "9,7 a 12,2 kg",
+            "safe_min_key": "P18",
+            "safe_max_key": "P34",
+            "percentis": {
+                "P10": [-0.5, -0.5, -0.4, -0.2, 0.1, 0.5, 0.9, 1.3, 1.7, 2.1, 2.5, 2.8, 3.0, 3.2, 3.4, 3.6, 3.8, 4.0, 4.3, 4.6, 4.9, 5.3, 5.7, 6.0, 6.3, 6.6, 6.8, 7.0, 7.1, 7.1, 7.0],
+                "P18": [0.0, -0.1, 0.0, 0.2, 0.5, 0.9, 1.3, 1.8, 2.3, 2.7, 3.2, 3.6, 4.0, 4.3, 4.6, 5.0, 5.3, 5.6, 5.9, 6.3, 6.7, 7.1, 7.4, 7.8, 8.2, 8.5, 8.8, 9.1, 9.3, 9.5, 9.7],
+                "P34": [0.5, 0.6, 0.9, 1.2, 1.6, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 4.9, 5.3, 5.7, 6.1, 6.4, 6.8, 7.2, 7.6, 8.1, 8.6, 9.0, 9.5, 10.0, 10.4, 10.9, 11.3, 11.6, 11.9, 12.1, 12.2],
+                "P50": [1.0, 1.1, 1.4, 1.8, 2.3, 2.8, 3.3, 3.9, 4.5, 5.0, 5.5, 5.9, 6.3, 6.6, 7.0, 7.3, 7.6, 8.0, 8.4, 8.9, 9.4, 9.9, 10.5, 11.0, 11.5, 12.0, 12.5, 13.0, 13.4, 13.7, 14.0],
+                "P90": [2.5, 2.7, 3.0, 3.5, 4.0, 4.7, 5.3, 6.0, 6.7, 7.4, 8.0, 8.6, 9.1, 9.7, 10.2, 10.7, 11.3, 12.0, 12.7, 13.5, 14.4, 15.3, 16.1, 17.0, 17.8, 18.6, 19.3, 19.9, 20.4, 20.8, 21.0]
+            }
+        },
+        "Eutrofia": {
+            "limite_imc": "IMC ≥ 18,5 kg/m² e < 25,0 kg/m²",
+            "rec_ganho": "8 a 12 kg",
+            "safe_min_key": "P10",
+            "safe_max_key": "P34",
+            "percentis": {
+                "P10": [-2.0, -2.1, -2.0, -1.8, -1.5, -1.1, -0.7, -0.3, 0.2, 0.6, 1.0, 1.3, 1.7, 1.9, 2.2, 2.5, 2.8, 3.1, 3.5, 3.9, 4.4, 4.8, 5.3, 5.8, 6.3, 6.7, 7.1, 7.4, 7.7, 7.9, 8.0],
+                "P34": [-0.3, 0.0, 0.3, 0.7, 1.1, 1.5, 1.9, 2.3, 2.7, 3.1, 3.5, 3.9, 4.3, 4.7, 5.0, 5.4, 5.9, 6.3, 6.8, 7.3, 7.8, 8.3, 8.8, 9.3, 9.8, 10.3, 10.7, 11.1, 11.5, 11.8, 12.0],
+                "P50": [0.5, 0.8, 1.1, 1.5, 1.9, 2.4, 2.9, 3.5, 4.0, 4.5, 5.0, 5.5, 5.9, 6.3, 6.7, 7.1, 7.6, 8.0, 8.5, 9.0, 9.5, 10.0, 10.5, 11.0, 11.5, 12.0, 12.5, 12.9, 13.3, 13.7, 14.0],
+                "P90": [2.0, 2.2, 2.6, 3.0, 3.5, 4.1, 4.8, 5.5, 6.2, 6.9, 7.5, 8.1, 8.7, 9.2, 9.7, 10.3, 10.9, 11.5, 12.2, 12.9, 13.7, 14.4, 15.2, 16.0, 16.8, 17.5, 18.1, 18.7, 19.2, 19.7, 20.0]
+            }
+        },
+        "Sobrepeso": {
+            "limite_imc": "IMC ≥ 25,0 kg/m² e < 30,0 kg/m²",
+            "rec_ganho": "7 a 9 kg",
+            "safe_min_key": "P18",
+            "safe_max_key": "P27",
+            "percentis": {
+                "P10": [-2.5, -2.2, -2.0, -1.8, -1.6, -1.4, -1.3, -1.1, -0.9, -0.7, -0.5, -0.3, 0.0, 0.3, 0.5, 0.9, 1.2, 1.5, 1.8, 2.2, 2.5, 2.9, 3.2, 3.5, 3.8, 4.1, 4.3, 4.6, 4.7, 4.9, 5.0],
+                "P18": [-2.0, -1.9, -1.8, -1.6, -1.4, -1.2, -0.9, -0.6, -0.4, -0.1, 0.2, 0.5, 0.8, 1.0, 1.3, 1.6, 1.9, 2.3, 2.7, 3.1, 3.5, 3.9, 4.4, 4.8, 5.2, 5.6, 6.0, 6.3, 6.6, 6.8, 7.0],
+                "P27": [-0.5, -0.4, -0.2, -0.1, 0.2, 0.4, 0.7, 1.0, 1.3, 1.5, 1.8, 2.0, 2.3, 2.5, 2.8, 3.0, 3.4, 3.7, 4.1, 4.5, 5.0, 5.5, 6.0, 6.5, 7.0, 7.4, 7.9, 8.3, 8.6, 8.8, 9.0],
+                "P50": [0.5, 0.5, 0.6, 0.8, 1.1, 1.4, 1.8, 2.2, 2.7, 3.1, 3.5, 3.9, 4.2, 4.5, 4.8, 5.2, 5.6, 6.0, 6.5, 7.0, 7.6, 8.2, 8.9, 9.5, 10.1, 10.7, 11.3, 11.8, 12.3, 12.7, 13.0],
+                "P90": [2.0, 2.1, 2.2, 2.5, 2.9, 3.3, 3.8, 4.3, 4.9, 5.4, 6.0, 6.5, 7.1, 7.6, 8.1, 8.7, 9.3, 10.0, 10.7, 11.5, 12.4, 13.2, 14.1, 15.0, 15.9, 16.7, 17.5, 18.2, 18.9, 19.5, 20.0]
+            }
+        },
+        "Obesidade": {
+            "limite_imc": "IMC ≥ 30,0 kg/m²",
+            "rec_ganho": "5 a 7,2 kg",
+            "safe_min_key": "P27",
+            "safe_max_key": "P38",
+            "percentis": {
+                "P10": [-2.5, -2.3, -2.1, -2.0, -1.9, -1.8, -1.7, -1.7, -1.6, -1.6, -1.5, -1.4, -1.4, -1.3, -1.2, -1.2, -1.1, -1.0, -0.9, -0.8, -0.7, -0.7, -0.6, -0.5, -0.4, -0.3, -0.3, -0.2, -0.1, -0.1, 0.0],
+                "P27": [-2.0, -1.9, -1.8, -1.6, -1.4, -1.2, -1.1, -0.9, -0.7, -0.5, -0.3, -0.1, 0.0, 0.2, 0.4, 0.6, 0.8, 1.1, 1.4, 1.7, 2.1, 2.5, 2.8, 3.2, 3.6, 3.9, 4.2, 4.5, 4.7, 4.9, 5.0],
+                "P38": [-0.5, -0.3, -0.1, 0.1, 0.2, 0.4, 0.6, 0.8, 1.0, 1.1, 1.3, 1.5, 1.6, 1.8, 2.0, 2.2, 2.4, 2.7, 3.0, 3.4, 3.8, 4.2, 4.6, 5.0, 5.4, 5.8, 6.2, 6.5, 6.8, 7.0, 7.2],
+                "P50": [0.0, 0.1, 0.3, 0.5, 0.8, 1.0, 1.3, 1.6, 1.9, 2.2, 2.5, 2.7, 2.9, 3.1, 3.3, 3.5, 3.8, 4.0, 4.3, 4.6, 4.9, 5.3, 5.6, 6.0, 6.4, 6.7, 7.0, 7.3, 7.6, 7.8, 8.0],
+                "P90": [1.5, 1.6, 1.8, 2.0, 2.3, 2.7, 3.1, 3.5, 4.0, 4.5, 5.0, 5.5, 6.0, 6.6, 7.1, 7.7, 8.3, 9.0, 9.7, 10.4, 11.2, 12.0, 12.7, 13.5, 14.3, 15.0, 15.7, 16.4, 17.0, 17.5, 18.0]
+            }
+        }
+    }
+
+    if imc_pre < 18.5:
+        classif = "Baixo Peso"
+    elif imc_pre < 25.0:
+        classif = "Eutrofia"
+    elif imc_pre < 30.0:
+        classif = "Sobrepeso"
+    else:
+        classif = "Obesidade"
+
+    dados_curva = DADOS_MS[classif]
+    idx_semana = max(0, min(semana - 10, 30))
+
+    meta_min = dados_curva["percentis"][dados_curva["safe_min_key"]][idx_semana]
+    meta_max = dados_curva["percentis"][dados_curva["safe_max_key"]][idx_semana]
+
+    status_ganho = "Adequado"
+    if ganho_atual < meta_min:
+        status_ganho = "Abaixo da meta"
+    elif ganho_atual > meta_max:
+        status_ganho = "Acima da meta"
+
+    if status_ganho == "Adequado":
+        diag = f"Ganho de peso de {ganho_atual:.1f} kg. Adequado para a {semana}ª semana."
+        cons = "Mantenha a qualidade da alimentação e hidratação."
+    elif status_ganho == "Abaixo da meta":
+        diag = f"Ganho de peso de {ganho_atual:.1f} kg. Abaixo do recomendado para a {semana}ª semana."
+        cons = "Buscaremos opções de maior densidade nutritiva e fácil digestão."
+    else:
+        diag = f"Ganho de peso de {ganho_atual:.1f} kg. Acima do recomendado para a {semana}ª semana."
+        cons = "Ajustaremos a qualidade dos carboidratos e a regularidade das refeições."
+
+    return {
+        "peso_base": peso_base, "imc_pre": imc_pre, "imc_atual": imc_atual,
+        "classificacao_pre": classif, "ganho_atual": ganho_atual,
+        "meta_semana_min": meta_min, "meta_semana_max": meta_max,
+        "meta_total_min": dados_curva["percentis"][dados_curva["safe_min_key"]][-1],
+        "meta_total_max": dados_curva["percentis"][dados_curva["safe_max_key"]][-1],
+        "dados_ms": dados_curva, "status_ganho": status_ganho,
+        "is_peso_estimado": is_peso_estimado, "diagnostico": diag,
+        "conselho": cons, "pdf_mode": pdf_mode
+    }

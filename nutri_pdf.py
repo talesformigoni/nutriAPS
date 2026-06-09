@@ -489,316 +489,166 @@ def gerar_pdf_paciente(nome, idade, sexo, peso, altura, imc, classif_imc,
 # ═══════════════════════════════════════════════════════════════════════════
 # PDF DO CARDÁPIO GERADO PELA IA
 # ═══════════════════════════════════════════════════════════════════════════
-def gerar_pdf_gestante(dados_g):
-    """
-    Gera o PDF Profissional Monocromático (Print-Friendly) para Gestantes,
-    incluindo a Curva de Atalah vetorial desenhada à mão e textos justificados.
-    """
-    from reportlab.pdfgen import canvas
-    from reportlab.lib.pagesizes import A4
-    from reportlab.lib import colors
-    from reportlab.lib.units import mm
-    from io import BytesIO
-    import datetime
-    from reportlab.platypus import Table, TableStyle, Paragraph
-    from reportlab.lib.styles import ParagraphStyle
-    from reportlab.lib.enums import TA_JUSTIFY
-
-    W, H = A4
-    buf = BytesIO()
-    c = canvas.Canvas(buf, pagesize=A4)
-
-    # ─── DEFINIÇÃO DA PALETA MONOCROMÁTICA ───
-    PRETO_TITULO = colors.HexColor("#000000")
-    PRETO_TEXTO = colors.HexColor("#222222")
-    CINZA_ESCURO = colors.HexColor("#555555")
-    CINZA_MEDIO = colors.HexColor("#AAAAAA")
-    CINZA_CLARO = colors.HexColor("#DDDDDD")
-    CINZA_FUNDO = colors.HexColor("#EEEEEE")
-    BRANCO = colors.white
-
-    # -- Dados de Entrada --
-    res = dados_g['res_gest']
-    hoje = datetime.datetime.now()
+# ── PÁGINA 2: GRÁFICO OFICIAL MS 2026 (GRAYSCALE PARA PDF) ──
+    _cabecalho_pagina_mono(c, "Acompanhamento do Ganho de Peso")
+    dados_ms = res['dados_ms']
+    perc = dados_ms['percentis']
     
-    meses = ["", "janeiro", "fevereiro", "março", "abril", "maio", "junho", 
-             "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"]
-    data_formatada = f"Gerado em {hoje.day:02d} de {meses[hoje.month]} de {hoje.year}"
-
-    # ── TRATAMENTO ANTI-ERRO PARA DADOS OPCIONAIS ──
-    imc_pre_val = res.get('imc_pre')
-    gpg_val = res.get('gpg')
-    
-    imc_pre_str = f"{imc_pre_val:.1f}" if imc_pre_val else "N/I"
-    gpg_str = f"{gpg_val:.1f} kg até o momento" if gpg_val is not None else "Não informado"
-    
-    if imc_pre_val and gpg_val is not None:
-        peso_pre_str = f"{dados_g['peso'] - gpg_val:.1f} kg (Relatado)"
-        if imc_pre_val < 18.5: classif_pre_str = "BAIXO PESO"
-        elif imc_pre_val < 25.0: classif_pre_str = "EUTROFIA"
-        elif imc_pre_val < 30.0: classif_pre_str = "SOBREPESO"
-        else: classif_pre_str = "OBESIDADE"
-    else:
-        peso_pre_str = "Não informado"
-        classif_pre_str = "NÃO AVALIADO"
-
-    # ─── PÁGINA 1 — Capa e Monitoramento Atalah ──────────────────────────────
-    
-    c.setFillColor(CINZA_FUNDO)
-    c.rect(0, H - 65*mm, W, 65*mm, fill=1, stroke=0)
-    
+    y_graf = H - 35*mm
+    c.setFont("Helvetica-Bold", 12)
     c.setFillColor(PRETO_TITULO)
-    c.setFont("Helvetica-Bold", 22)
-    c.drawString(15*mm, H - 25*mm, "Mapa de Saúde Gestacional")
-
-    c.setFont("Helvetica", 11)
+    c.drawCentredString(W/2, y_graf, "GRÁFICO DE ACOMPANHAMENTO DO GANHO DE PESO")
+    y_graf -= 6*mm
+    c.setFont("Helvetica-Bold", 10)
     c.setFillColor(CINZA_ESCURO)
-    c.drawString(15*mm, H - 32*mm, "Atenção Primária à Saúde | Linha de Cuidado da Gestante")
-    c.setFont("Helvetica", 9)
-    c.drawString(15*mm, H - 37*mm, "Prefeitura de Buritis-RO | Secretaria Municipal de Saúde")
-
-    c.setFillColor(PRETO_TITULO)
-    c.setFont("Helvetica-Bold", 16)
-    c.drawString(15*mm, H - 48*mm, _limpar(dados_g['nome']).upper())
-    
-    c.setFont("Helvetica", 9)
-    c.setFillColor(CINZA_ESCURO)
-    c.drawString(15*mm, H - 54*mm, data_formatada)
-
-    # ── CARDS DE MÉTRICAS (Topo) ──
-    larg_card = 52*mm
-    y_cards = H - 85*mm
-    
-    _tag_metrica_mono(c, 15*mm, y_cards, larg_card, "IDADE GESTACIONAL", f"{dados_g['semana']} sem")
-    _tag_metrica_mono(c, 71*mm, y_cards, larg_card, "PESO ATUAL", f"{dados_g['peso']:.1f} kg")
-    _tag_metrica_mono(c, 127*mm, y_cards, larg_card, "IMC PRÉ-GESTACIONAL", imc_pre_str)
-    
-    _card_mono(c, 127*mm, y_cards - 12*mm, larg_card, 7*mm, cor_fundo=CINZA_CLARO)
-    c.setFillColor(PRETO_TEXTO)
-    c.setFont("Helvetica-Bold", 8)
-    c.drawCentredString(127*mm + larg_card/2, y_cards - 9*mm, f"INICIAL: {classif_pre_str}")
-
-    # ── SEÇÃO 1: Identificação Detalhada ──
-    y = y_cards - 25*mm
-    y = _titulo_secao_mono(c, y, "1. IDENTIFICAÇÃO E BIOMETRIA")
-    y -= 5*mm
-    
-    y = _linha_info_mono(c, y, "Nome Completo:", dados_g['nome'], fundo=True)
-    y = _linha_info_mono(c, y, "Idade da Paciente:", f"{dados_g['idade']} anos", fundo=False)
-    y = _linha_info_mono(c, y, "Altura da Paciente:", f"{dados_g['altura']} cm", fundo=True)
-    y = _linha_info_mono(c, y, "Peso Pré-Gestacional:", peso_pre_str, fundo=False)
-    y = _linha_info_mono(c, y, "Peso Atual na Consulta:", f"{dados_g['peso']:.1f} kg", fundo=True)
-    y = _linha_info_mono(c, y, "Ganho de Peso Total (GPG):", gpg_str, fundo=False)
-    
-    y -= 8*mm
-    y = _titulo_secao_mono(c, y, "2. CLASSIFICAÇÃO ATUAL (ATALAH 1997)")
-    y -= 5*mm
-    y = _linha_info_mono(c, y, "Semana Gestacional Calculada:", f"{dados_g['semana']} semanas", fundo=True)
-    y = _linha_info_mono(c, y, "IMC Atual da Semana:", f"{res['imc_atual']:.1f} kg/m²", fundo=False)
-    y = _linha_info_mono(c, y, "Estado Nutricional Atual:", f"{res['classificacao_atual'].upper()}", fundo=True, cor_valor=PRETO_TITULO)
-    y = _linha_info_mono(c, y, "Meta de Ganho Total Recomendada:", f"{res['ganho_min']} a {res['ganho_max']} kg", fundo=False)
-
-    # ── SEÇÃO 3: Diagnóstico e Conduta (Texto Humanizado Justificado) ──
-    y -= 8*mm
-    y = _titulo_secao_mono(c, y, "3. DIAGNÓSTICO E CONDUTA NUTRICIONAL")
-    y -= 4*mm
-    
-    texto_laudo = f"\"{res['diagnostico']}\" — {res['conselho']}"
-    texto_limpo = texto_laudo
-
-    # Utilizando Paragraph para justificar o texto perfeitamente
-    estilo_justificado = ParagraphStyle(
-        'Justificado',
-        fontName='Helvetica-Oblique',
-        fontSize=9,
-        textColor=CINZA_ESCURO,
-        alignment=TA_JUSTIFY,
-        leading=13 # Espaçamento confortável entre as linhas
-    )
-    
-    p = Paragraph(texto_limpo, estilo_justificado)
-    w_p, h_p = p.wrap(175*mm, 50*mm) # 175mm é a largura útil da página
-    y -= h_p # Desce o cursor na página com base no tamanho exato do bloco de texto
-    p.drawOn(c, 18*mm, y)
-
-# --- NOVO BLOCO: CUIDADOS ESPECIAIS (SÓ APARECE SE SELECIONADO) ---
-    is_dmg = dados_g.get('is_dmg', False)
-    is_has = dados_g.get('is_has', False)
-
-    if is_dmg or is_has:
-        y -= 10*mm
-        
-        # Título sem numeração, apenas um destaque visual
-        c.setFont("Helvetica-Bold", 10)
-        c.setFillColor(PRETO_TITULO)
-        c.drawString(15*mm, y, "CUIDADOS ESPECIAIS")
-        c.setStrokeColor(colors.black)
-        c.setLineWidth(0.3)
-        c.line(15*mm, y - 2*mm, 195*mm, y - 2*mm)
-        y -= 6*mm
-
-        # Define qual texto usar baseado nas seleções
-        if is_dmg and is_has:
-            texto_especial = "Neste momento, seu corpo está passando por grandes adaptações com a glicose e a pressão. Isso exige carinho e cuidado em dobro com as suas escolhas. O alimento será o seu principal remédio para que você e o bebê cheguem ao final da gestação com muita saúde. Vamos unir forças: comida de verdade, feita em casa. Descasque mais e desembale menos. Evite industrializados, doces e temperos prontos. Foque no arroz com feijão, carnes magras, ovos, saladas variadas e muita hidratação. Estamos juntos com você nessa jornada!"
-        elif is_dmg:
-            texto_especial = "Notamos que a sua glicose está precisando de uma atenção especial. Fique tranquila! Nossa missão não é fazer você passar fome ou cortar todo o carboidrato, mas sim ensinar o seu corpo a absorver o açúcar bem devagar para proteger o crescimento do bebê. Sempre combine um carboidrato com uma fibra ou proteína. Vai comer uma fruta? Adicione aveia ou linhaça. Vai comer um pão? Coloque um ovo ou queijo. Evite sucos coados (mesmo os naturais) e doces isolados, priorizando refeições completas. Fracionar a alimentação ajuda a evitar picos de glicose!"
-        elif is_has:
-            texto_especial = "Sua pressão arterial está exigindo um cuidado extra para garantir que os nutrientes e o oxigênio cheguem perfeitamente até o seu bebê. Vamos fazer ajustes simples na cozinha que farão toda a diferença. Esconda o saleiro da mesa e abuse de temperos naturais: alho, cebola, limão, orégano e cheiro-verde. É fundamental retirar da rotina os temperos em cubo, macarrão instantâneo, embutidos (salsicha, calabresa) e salgadinhos. Aumente o consumo de água, frutas e vegetais, pois eles contêm nutrientes que ajudam a relaxar os vasos sanguíneos!"
-
-        # Imprime o texto justificado com os acentos preservados
-        p_esp = Paragraph(texto_especial, estilo_justificado)
-        w_esp, h_esp = p_esp.wrap(175*mm, 60*mm)
-        y -= h_esp
-        p_esp.drawOn(c, 18*mm, y)
-    # =========================================================================
-
-    _rodape_pagina_mono(c, dados_g['nome'], 1)
-    c.showPage()
-
-    # ─── PÁGINA 2 — Gráfico Vetorial da Curva de Atalah ──────────────────────
-    y_graf = H - 30*mm
-    _cabecalho_pagina_mono(c, "Curva de Acompanhamento Nutricional")
-    
-    y_graf = _titulo_secao_mono(c, y_graf, "4. CURVA DE ESTADO NUTRICIONAL SEMANAL")
+    c.drawCentredString(W/2, y_graf, f"{res['classificacao_pre'].upper()} ({dados_ms['limite_imc']})")
     y_graf -= 5*mm
+    c.setFont("Helvetica-Bold", 8)
+    c.drawCentredString(W/2, y_graf, f"GANHO DE PESO RECOMENDADO ATÉ 40 SEMANAS DE GESTAÇÃO: {dados_ms['rec_ganho']}")
+    y_graf -= 8*mm
     
-    c.setFont("Helvetica", 8)
-    c.setFillColor(CINZA_ESCURO)
-    c.drawString(15*mm, y_graf, "Acompanhe a evolução do seu IMC semana a semana para garantir uma gestação saudável.")
-    
-    y_graf -= 10*mm
-    
-    # ── DESENHO VETORIAL DA CURVA DE ATALAH ──
     graf_x, graf_y = 20*mm, y_graf - 110*mm
-    graf_w, graf_h = 170*mm, 100*mm
+    graf_w, graf_h = 165*mm, 105*mm
     
-    SEM_MIN, SEM_MAX = 6, 42
-    IMC_MIN, IMC_MAX = 18, 36 
-    
-    def to_pdf_coords(sem, imc):
+    SEM_MIN, SEM_MAX = 10, 40
+    Y_MIN, Y_MAX = -10, 25 
+
+    def coord(sem, ganho):
         x = graf_x + ((sem - SEM_MIN) / (SEM_MAX - SEM_MIN)) * graf_w
-        imc_clamped = max(IMC_MIN, min(imc, IMC_MAX)) 
-        y = graf_y + ((imc_clamped - IMC_MIN) / (IMC_MAX - IMC_MIN)) * graf_h
+        g_clamped = max(Y_MIN, min(ganho, Y_MAX))
+        y = graf_y + ((g_clamped - Y_MIN) / (Y_MAX - Y_MIN)) * graf_h
         return x, y
 
+    # Fundo Branco e Grade Fina (1 em 1 kg)
     c.setFillColor(BRANCO)
     c.rect(graf_x, graf_y, graf_w, graf_h, fill=1, stroke=1)
-    c.setStrokeColor(CINZA_CLARO)
-    c.setLineWidth(0.1)
+    c.setStrokeColor(colors.HexColor("#EAEAEA"))
+    c.setLineWidth(0.3)
     
-    c.setFont("Helvetica", 7)
+    c.setFont("Helvetica", 6)
     c.setFillColor(CINZA_ESCURO)
-    for sem in range(SEM_MIN, SEM_MAX + 1, 2):
-        x, _ = to_pdf_coords(sem, IMC_MIN)
+    for sem in range(SEM_MIN, SEM_MAX + 1):
+        x, _ = coord(sem, Y_MIN)
         c.line(x, graf_y, x, graf_y + graf_h)
-        c.drawCentredString(x, graf_y - 4*mm, str(sem))
-    c.drawString(graf_x + graf_w/2, graf_y - 8*mm, "Semana Gestacional")
-
-    for imc in range(IMC_MIN, IMC_MAX + 1, 2):
-        _, y = to_pdf_coords(SEM_MIN, imc)
-        c.line(graf_x, y, graf_x + graf_w, y)
-        c.drawRightString(graf_x - 2*mm, y - 1*mm, str(imc))
+        c.drawCentredString(x, graf_y - 3*mm, str(sem))
         
+    c.setFont("Helvetica-Bold", 7)
+    c.drawCentredString(graf_x + graf_w/2, graf_y - 10*mm, "← SEMANA DE GESTAÇÃO →")
+
+    c.setFont("Helvetica", 6)
+    for val_y in range(Y_MIN, Y_MAX + 1):
+        _, y = coord(SEM_MIN, val_y)
+        c.line(graf_x, y, graf_x + graf_w, y)
+        c.drawRightString(graf_x - 1.5*mm, y - 1*mm, str(val_y))
+    
     c.saveState()
     c.rotate(90)
-    c.drawString(graf_y + graf_h/2, -(graf_x - 8*mm), "IMC Atual (kg/m2)")
+    c.setFont("Helvetica-Bold", 7)
+    c.drawCentredString(graf_y + graf_h/2, -(graf_x - 6*mm), "← GANHO DE PESO GESTACIONAL (kg) →")
     c.restoreState()
 
-    tabela = res['tabela_atalah']
-    semanas_curva = list(range(SEM_MIN, SEM_MAX + 1))
+    # Marcações e Textos dos 3 Trimestres
+    c.setStrokeColor(CINZA_MEDIO); c.setLineWidth(1.5)
+    c.line(coord(13, Y_MIN)[0], graf_y, coord(13, Y_MIN)[0], graf_y + graf_h)
+    c.line(coord(27, Y_MIN)[0], graf_y, coord(27, Y_MIN)[0], graf_y + graf_h)
     
-    c.setLineWidth(1.0)
-    
-    c.setStrokeColor(PRETO_TEXTO) 
-    p_anterior = to_pdf_coords(SEM_MIN, tabela[SEM_MIN][0])
-    for sem in semanas_curva[1:]:
-        p_atual = to_pdf_coords(sem, tabela[sem][0])
-        c.line(p_anterior[0], p_anterior[1], p_atual[0], p_atual[1])
-        p_anterior = p_atual
-        
-    c.setStrokeColor(CINZA_ESCURO)
-    c.setDash(4, 2) 
-    p_anterior = to_pdf_coords(SEM_MIN, tabela[SEM_MIN][1])
-    for sem in semanas_curva[1:]:
-        p_atual = to_pdf_coords(sem, tabela[sem][1])
-        c.line(p_anterior[0], p_anterior[1], p_atual[0], p_atual[1])
-        p_anterior = p_atual
-        
-    c.setStrokeColor(CINZA_MEDIO)
-    c.setDash(1, 1) 
-    p_anterior = to_pdf_coords(SEM_MIN, tabela[SEM_MIN][2])
-    for sem in semanas_curva[1:]:
-        p_atual = to_pdf_coords(sem, tabela[sem][2])
-        c.line(p_anterior[0], p_anterior[1], p_atual[0], p_atual[1])
-        p_anterior = p_atual
-    c.setDash()
-
-    # Legenda com fundo ajustado (Mais larga para não vazar o texto)
-    leg_largura = 52*mm # Aumentado de 40mm para 52mm
-    leg_x, leg_y = graf_x + graf_w - leg_largura - 5*mm, graf_y + 5*mm
-    
-    _card_mono(c, leg_x, leg_y, leg_largura, 18*mm, cor_fundo=colors.white, cor_borda=CINZA_CLARO)
     c.setFont("Helvetica-Bold", 7)
-    c.setFillColor(PRETO_TEXTO)
-    c.drawString(leg_x + 2*mm, leg_y + 14*mm, "LEGENDA")
-    
-    c.setLineWidth(0.8)
-    c.setStrokeColor(PRETO_TEXTO); c.line(leg_x + 2*mm, leg_y + 10*mm, leg_x + 10*mm, leg_y + 10*mm)
-    c.setFont("Helvetica", 6); c.setFillColor(CINZA_ESCURO); c.drawString(leg_x + 12*mm, leg_y + 9*mm, "Divisoria Baixo Peso / Normal")
-    
-    c.setStrokeColor(CINZA_ESCURO); c.setDash(3,1); c.line(leg_x + 2*mm, leg_y + 6*mm, leg_x + 10*mm, leg_y + 6*mm)
-    c.setDash(); c.drawString(leg_x + 12*mm, leg_y + 5*mm, "Divisoria Normal / Sobrepeso")
-    
-    c.setStrokeColor(CINZA_MEDIO); c.setDash(1,1); c.line(leg_x + 2*mm, leg_y + 2*mm, leg_x + 10*mm, leg_y + 2*mm)
-    c.setDash(); c.drawString(leg_x + 12*mm, leg_y + 1*mm, "Divisoria Sobrepeso / Obesidade")
+    c.drawCentredString(coord(11.5, Y_MIN)[0], graf_y - 6*mm, "1º Trimestre")
+    c.drawCentredString(coord(20, Y_MIN)[0], graf_y - 6*mm, "2º Trimestre")
+    c.drawCentredString(coord(33.5, Y_MIN)[0], graf_y - 6*mm, "3º Trimestre")
 
-    x_pac, y_pac = to_pdf_coords(dados_g['semana'], res['imc_atual'])
+    # === DESENHO DAS ZONAS EM ESCALA DE CINZA ===
+    C_FILL = colors.HexColor("#F0F0F0") # Sombreamento da zona recomendada
+    C_SAFE = colors.HexColor("#444444") # Linhas da zona de adequação (Sólidas)
+    C_OUT = colors.HexColor("#888888")  # Linhas fora da zona (Tracejadas)
     
+    x_vals = list(range(10, 41))
+    keys_sorted = sorted(perc.keys(), key=lambda k: float(k.replace('P','')))
+    
+    # 1. Desenhar Área Sombreada (Fill)
+    y_bottom = perc[dados_ms["safe_min_key"]]
+    y_top = perc[dados_ms["safe_max_key"]]
+    c.setFillColor(C_FILL)
+    p = c.beginPath()
+    p.moveTo(*coord(x_vals[0], y_bottom[0]))
+    for i in range(1, len(x_vals)): p.lineTo(*coord(x_vals[i], y_bottom[i]))
+    for i in range(len(x_vals)-1, -1, -1): p.lineTo(*coord(x_vals[i], y_top[i]))
+    p.close()
+    c.drawPath(p, fill=1, stroke=0)
+
+    # 2. Desenhar as Linhas (Tracejadas vs Sólidas)
+    for k in keys_sorted:
+        is_safe = (k == dados_ms["safe_min_key"] or k == dados_ms["safe_max_key"])
+        c.setStrokeColor(C_SAFE if is_safe else C_OUT)
+        c.setLineWidth(1.5 if is_safe else 1.0)
+        
+        if not is_safe: c.setDash(3, 2)
+        else: c.setDash()
+        
+        y_vals = perc[k]
+        for i in range(len(x_vals)-1):
+            c.line(*coord(x_vals[i], y_vals[i]), *coord(x_vals[i+1], y_vals[i+1]))
+        
+        # Bolinhas brancas e Rótulos dos Percentis
+        c.setFillColor(BRANCO)
+        c.circle(coord(40, y_vals[-1])[0] + 3*mm, coord(40, y_vals[-1])[1], 2.5*mm, fill=1, stroke=1)
+        c.setFillColor(C_SAFE if is_safe else C_OUT)
+        c.setFont("Helvetica-Bold", 6.5)
+        c.drawCentredString(coord(40, y_vals[-1])[0] + 3*mm, coord(40, y_vals[-1])[1] - 1*mm, k)
+
+    # 3. Ponto da Paciente
+    x_pac, y_pac = coord(dados['semana'], res['ganho_atual'])
     c.setStrokeColor(PRETO_TITULO)
-    c.setLineWidth(0.5)
-    c.setDash(2,2)
-    c.line(graf_x, y_pac, x_pac, y_pac) 
-    c.line(x_pac, graf_y, x_pac, y_pac) 
-    c.setDash()
+    c.setLineWidth(0.5); c.setDash(2,2)
+    c.line(graf_x, y_pac, x_pac, y_pac); c.line(x_pac, graf_y, x_pac, y_pac) 
+    c.setDash(); c.setFillColor(PRETO_TITULO)
+    c.circle(x_pac, y_pac, 2*mm, fill=1, stroke=1)
     
-    c.setStrokeColor(BRANCO)
-    c.setLineWidth(1.0)
-    c.setFillColor(PRETO_TITULO)
-    c.circle(x_pac, y_pac, 3*mm, fill=1, stroke=1)
-    
-    c.setFont("Helvetica-Bold", 9)
-    c.setFillColor(PRETO_TITULO)
-    c.drawCentredString(x_pac, y_pac + 5*mm, f"IMC {res['imc_atual']:.1f}")
+    # 4. Fonte
+    c.setFillColor(CINZA_ESCURO)
+    c.setFont("Helvetica", 5.5)
+    c.drawString(graf_x, graf_y - 15*mm, "Fonte: KAC, G. et al. Gestational weight gain charts: results from the Brazilian Maternal and Child Nutrition Consortium. Am. J. Clin. Nutr., v. 113, n. 5, p. 1351-1360, 2021. DOI: https://doi.org/10.1093/ajcn/nqaa402")
 
-# ── SEÇÃO 5: O Espaço da Gestante (Desafios e Dificuldades) ──
-    # Posiciona a nova Seção 5 logo abaixo do gráfico de Atalah
-    y_desafios = graf_y - 20*mm
+    # ── TABELA DINÂMICA COM ANTI-OVERLAP ──
+    y_tab = graf_y - 20*mm
+    tab_data = [
+        ["Marcos Gestacionais", "Meta Mínima", "Meta Máxima"],
+        [f"Até 13 semanas (1º Trimestre)", f"{perc[dados_ms['safe_min_key']][3]:+.1f} kg", f"{perc[dados_ms['safe_max_key']][3]:+.1f} kg"],
+        [f"Até 27 semanas (2º Trimestre)", f"{perc[dados_ms['safe_min_key']][17]:+.1f} kg", f"{perc[dados_ms['safe_max_key']][17]:+.1f} kg"],
+        [f"Até 40 semanas (3º Trimestre)", f"{perc[dados_ms['safe_min_key']][-1]:+.1f} kg", f"{perc[dados_ms['safe_max_key']][-1]:+.1f} kg"]
+    ]
+    tab = Table(tab_data, colWidths=[75*mm, 45*mm, 45*mm])
+    tab.setStyle(TableStyle([
+        ("BACKGROUND", (0,0), (-1,0), CINZA_ESCURO), ("TEXTCOLOR", (0,0), (-1,0), BRANCO),
+        ("ALIGN", (0,0), (-1,-1), "CENTER"), ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"), 
+        ("FONTSIZE", (0,0), (-1,-1), 8), ("GRID", (0,0), (-1,-1), 0.5, CINZA_CLARO),
+        ("ROWBACKGROUNDS", (0,1), (-1,-1), [BRANCO, CINZA_FUNDO]),
+        ("TOPPADDING", (0,0), (-1,-1), 4), ("BOTTOMPADDING", (0,0), (-1,-1), 4)
+    ]))
+    
+    # O ReportLab avalia a altura da tabela e joga os Desafios exatamente pra baixo dela
+    w_tab, h_tab = tab.wrapOn(c, W, H)
+    tab.drawOn(c, 22.5*mm, y_tab - h_tab)
+
+    # ── ESPAÇO DE DESAFIOS ──
+    y_desafios = y_tab - h_tab - 10*mm
     y_desafios = _titulo_secao_mono(c, y_desafios, "5. MEUS DESAFIOS E DIFICULDADES (Espaço da Paciente)")
     y_desafios -= 4*mm
     
-    c.setFont("Helvetica-BoldOblique", 9)
-    c.setFillColor(PRETO_TEXTO)
+    c.setFont("Helvetica-BoldOblique", 9); c.setFillColor(PRETO_TEXTO)
     c.drawString(15*mm, y_desafios, "O que foi mais difícil de seguir na dieta ou nos conselhos que combinamos?")
     
     y_desafios -= 5*mm
-    c.setFont("Helvetica", 8.5)
-    c.setFillColor(CINZA_ESCURO)
-    c.drawString(15*mm, y_desafios, "Anote abaixo suas dúvidas e barreiras. Leve este papel na próxima consulta para buscarmos estratégias juntos!")
+    c.setFont("Helvetica", 8.5); c.setFillColor(CINZA_ESCURO)
+    c.drawString(15*mm, y_desafios, "Anote abaixo suas dúvidas e barreiras. Leve este papel na próxima consulta.")
 
-    # Desenha linhas pontilhadas elegantes para a paciente escrever à mão em casa
     y_linhas = y_desafios - 12*mm
-    c.setStrokeColor(CINZA_MEDIO)
-    c.setLineWidth(0.5)
-    c.setDash(1, 2) # Efeito pontilhado refinado
-    
-    # Aumentado para 5 linhas, já que removemos a tabela e temos mais espaço livre
-    for _ in range(6): 
+    c.setStrokeColor(CINZA_MEDIO); c.setLineWidth(0.5); c.setDash(1, 2)
+    for _ in range(5): 
         c.line(15*mm, y_linhas, 195*mm, y_linhas)
         y_linhas -= 9*mm
-        
-    c.setDash() # Reseta o efeito pontilhado para não afetar os próximos elementos
+    c.setDash()
 
-    # Rodapé e fechamento do arquivo
     _rodape_pagina_mono(c, dados_g['nome'], 2)
     c.showPage()
     c.save()
@@ -1062,4 +912,318 @@ def gerar_pdf_cardapio_ia(dados_paciente, texto_cardapio):
     # Gera o PDF final
     doc.build(elementos, onFirstPage=desenhar_rodape, onLaterPages=desenhar_rodape)
     
+    return buf.getvalue()
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PDF DA GESTANTE — Padrão MS 2026 — Impressão em Preto e Branco
+# ═══════════════════════════════════════════════════════════════════════════
+
+def gerar_pdf_gestante(dados_g):
+    """
+    PDF Obstétrico Diamante atualizado para as Diretrizes MS (2026) e SBD.
+    """
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.units import mm
+    from reportlab.platypus import Paragraph, Table, TableStyle
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.enums import TA_JUSTIFY
+    from io import BytesIO
+    import datetime
+
+    W, H = A4
+    buf = BytesIO()
+    c = canvas.Canvas(buf, pagesize=A4)
+
+    # PALETA MONOCROMÁTICA IMPRESSÃO-FRIENDLY
+    PRETO_TITULO = colors.HexColor("#000000")
+    PRETO_TEXTO = colors.HexColor("#222222")
+    CINZA_ESCURO = colors.HexColor("#555555")
+    CINZA_MEDIO = colors.HexColor("#AAAAAA")
+    CINZA_CLARO = colors.HexColor("#DDDDDD")
+    CINZA_FUNDO = colors.HexColor("#EEEEEE")
+    BRANCO = colors.white
+
+    res = dados_g['res_gest']
+    hoje = datetime.datetime.now().strftime("%d/%m/%Y")
+
+    peso_base_str = f"{res['peso_base']:.1f} kg"
+    if res['is_peso_estimado']:
+        peso_base_str += " (Estimado na Consulta)"
+
+    # ── PÁGINA 1: CAPA, BIOMETRIA E LAUDOS CLÍNICOS ──
+    c.setFillColor(CINZA_FUNDO)
+    c.rect(0, H - 65*mm, W, 65*mm, fill=1, stroke=0)
+    
+    c.setFillColor(PRETO_TITULO)
+    c.setFont("Helvetica-Bold", 22)
+    c.drawString(15*mm, H - 25*mm, "Mapa de Saúde Gestacional")
+
+    c.setFont("Helvetica", 11)
+    c.setFillColor(CINZA_ESCURO)
+    c.drawString(15*mm, H - 32*mm, "Atenção Primária à Saúde | Linha de Cuidado da Gestante")
+    c.setFont("Helvetica", 9)
+    c.drawString(15*mm, H - 37*mm, "Diretrizes Ministério da Saúde (2026) / SBD")
+
+    c.setFillColor(PRETO_TITULO)
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(15*mm, H - 48*mm, str(dados_g['nome']).upper())
+    
+    c.setFont("Helvetica", 9)
+    c.setFillColor(CINZA_ESCURO)
+    c.drawString(15*mm, H - 54*mm, f"Gerado em {hoje}")
+
+    # CARDS DE MÉTRICAS RÁPIDAS
+    larg_card = 52*mm
+    y_cards = H - 85*mm
+    _tag_metrica_mono(c, 15*mm, y_cards, larg_card, "IDADE GESTACIONAL", f"{dados_g['semana']} sem")
+    _tag_metrica_mono(c, 71*mm, y_cards, larg_card, "GANHO ATUAL", f"{res['ganho_atual']:.1f} kg")
+    _tag_metrica_mono(c, 127*mm, y_cards, larg_card, "IMC PRÉ-GESTACIONAL", f"{res['imc_pre']:.1f}")
+    
+    _card_mono(c, 127*mm, y_cards - 12*mm, larg_card, 7*mm, cor_fundo=CINZA_CLARO)
+    c.setFillColor(PRETO_TEXTO)
+    c.setFont("Helvetica-Bold", 8)
+    c.drawCentredString(127*mm + larg_card/2, y_cards - 9*mm, res['classificacao_pre'].upper())
+
+    # SEÇÃO 1: BIOMETRIA
+    y = y_cards - 25*mm
+    y = _titulo_secao_mono(c, y, "1. DADOS OBSTÉTRICOS E BIOMETRIA")
+    y -= 5*mm
+    y = _linha_info_mono(c, y, "Peso Inicial de Referência (Base):", peso_base_str, fundo=True)
+    y = _linha_info_mono(c, y, "Peso Atual na Consulta:", f"{dados_g['peso']:.1f} kg", fundo=False)
+    y = _linha_info_mono(c, y, f"Meta para a Semana Atual ({dados_g['semana']} sem):", f"{res['meta_semana_min']:.1f} a {res['meta_semana_max']:.1f} kg", fundo=True)
+    y = _linha_info_mono(c, y, "Meta de Ganho Total até o Parto:", f"{res['meta_total_min']:.1f} a {res['meta_total_max']:.1f} kg", fundo=False)
+    
+    # SEÇÃO 2: DIAGNÓSTICO DO GANHO DE PESO
+    y -= 8*mm
+    y = _titulo_secao_mono(c, y, "2. AVALIAÇÃO DO GANHO DE PESO ACUMULADO")
+    y -= 4*mm
+    texto_laudo = f"\"{res['diagnostico']}\" — {res['conselho']}"
+    estilo_justificado = ParagraphStyle('Just', fontName='Helvetica-Oblique', fontSize=9, textColor=CINZA_ESCURO, alignment=TA_JUSTIFY, leading=13)
+    p = Paragraph(texto_laudo, estilo_justificado)
+    w_p, h_p = p.wrap(175*mm, 50*mm)
+    y -= h_p
+    p.drawOn(c, 18*mm, y)
+
+    # SEÇÃO 3: CUIDADOS ESPECIAIS
+    is_dmg = dados_g.get('is_dmg', False)
+    is_has = dados_g.get('is_has', False)
+
+    if is_dmg or is_has:
+        y -= 8*mm
+        c.setFont("Helvetica-Bold", 10)
+        c.setFillColor(PRETO_TITULO)
+        c.drawString(15*mm, y, "CUIDADOS ESPECIAIS")
+        c.setStrokeColor(colors.black)
+        c.setLineWidth(0.3)
+        c.line(15*mm, y - 2*mm, 195*mm, y - 2*mm)
+        y -= 6*mm
+
+        if is_dmg and is_has:
+            texto_especial = "Neste momento, seu corpo está passando por grandes adaptações com a glicose e a pressão. Isso exige carinho e cuidado em dobro com as suas escolhas. O alimento será o seu principal remédio para que você e o bebê cheguem ao final da gestação com muita saúde. Vamos unir forças: comida de verdade, feita em casa. Descasque mais e desembale menos. Evite industrializados, doces e temperos prontos. Foque no arroz com feijão, carnes magras, ovos, saladas variadas e muita hidratação. Estamos juntos com você nessa jornada!"
+        elif is_dmg:
+            texto_especial = "Notamos que a sua glicose está precisando de uma atenção especial. Fique tranquila! Nossa missão não é fazer você passar fome ou cortar todo o carboidrato, mas sim ensinar o seu corpo a absorver o açúcar bem devagar para proteger o crescimento do bebê. Sempre combine um carboidrato com uma fibra ou proteína. Vai comer uma fruta? Adicione aveia ou linhaça. Vai comer um pão? Coloque um ovo ou queijo. Evite sucos coados (mesmo os naturais) e doces isolados, priorizando refeições completas. Fracionar a alimentação ajuda a evitar picos de glicose!"
+        elif is_has:
+            texto_especial = "Sua pressão arterial está exigindo um cuidado extra para garantir que os nutrientes e o oxigênio cheguem perfeitamente até o seu bebê. Vamos fazer adjustments simples na cozinha que farão toda a diferença. Esconda o saleiro da mesa e abuse de temperos naturais: alho, cebola, limão, orégano e cheiro-verde. É fundamental retirar da rotina os temperos em cubo, macarrão instantâneo, embutidos (salsicha, calabresa) e salgadinhos. Aumente o consumo de água, frutas e vegetais, pois eles contêm nutrientes que ajudam a relaxar os vasos sanguíneos!"
+
+        p_esp = Paragraph(texto_especial, estilo_justificado)
+        w_esp, h_esp = p_esp.wrap(175*mm, 60*mm)
+        y -= h_esp
+        p_esp.drawOn(c, 18*mm, y)
+
+    # SEÇÃO 4: MONITORAMENTO DE GLICEMIA (SBD)
+    diag_dmg = dados_g.get('diagnostico_dmg', 'Sem rastreio')
+    alerta_dmg = dados_g.get('alerta_dmg', '')
+    
+    y -= 10*mm
+    c.setFont("Helvetica-Bold", 10)
+    c.setFillColor(PRETO_TITULO)
+    c.drawString(15*mm, y, "3. RASTREIO GLICÊMICO E RISCO METABÓLICO")
+    c.setStrokeColor(colors.black)
+    c.setLineWidth(0.3)
+    c.line(15*mm, y - 2*mm, 195*mm, y - 2*mm)
+    y -= 7*mm
+    
+    if diag_dmg != "Sem rastreio":
+        c.setFont("Helvetica-Bold", 9)
+        c.setFillColor(PRETO_TEXTO)
+        c.drawString(15*mm, y, f"Status Glicêmico: {diag_dmg}")
+        y -= 4*mm
+        c.setFont("Helvetica", 9)
+        c.setFillColor(CINZA_ESCURO)
+        c.drawString(15*mm, y, f"Conduta SBD: {alerta_dmg}" if alerta_dmg else "Exames laboratoriais normais. Manter conduta preventiva da APS.")
+    else:
+        c.setFont("Helvetica-Oblique", 9)
+        c.setFillColor(CINZA_MEDIO)
+        c.drawString(15*mm, y, "Dados de rastreio glicêmico (Jejum/TOTG) não informados nesta consulta.")
+
+    _rodape_pagina_mono(c, dados_g['nome'], 1)
+    c.showPage()
+
+    # ── PÁGINA 2: GRÁFICO OFICIAL MS 2026 (GRAYSCALE PARA PDF) ──
+    _cabecalho_pagina_mono(c, "Acompanhamento do Ganho de Peso")
+    dados_ms = res['dados_ms']
+    perc = dados_ms['percentis']
+    
+    y_graf = H - 35*mm
+    c.setFont("Helvetica-Bold", 12)
+    c.setFillColor(PRETO_TITULO)
+    c.drawCentredString(W/2, y_graf, "GRÁFICO DE ACOMPANHAMENTO DO GANHO DE PESO")
+    y_graf -= 6*mm
+    c.setFont("Helvetica-Bold", 10)
+    c.setFillColor(CINZA_ESCURO)
+    c.drawCentredString(W/2, y_graf, f"{res['classificacao_pre'].upper()} ({dados_ms['limite_imc']})")
+    y_graf -= 5*mm
+    c.setFont("Helvetica-Bold", 8)
+    c.drawCentredString(W/2, y_graf, f"GANHO DE PESO RECOMENDADO ATÉ 40 SEMANAS DE GESTAÇÃO: {dados_ms['rec_ganho']}")
+    y_graf -= 8*mm
+    
+    graf_x, graf_y = 20*mm, y_graf - 110*mm
+    graf_w, graf_h = 165*mm, 105*mm
+    
+    SEM_MIN, SEM_MAX = 10, 40
+    Y_MIN, Y_MAX = -10, 25 
+
+    def coord(sem, ganho):
+        x = graf_x + ((sem - SEM_MIN) / (SEM_MAX - SEM_MIN)) * graf_w
+        g_clamped = max(Y_MIN, min(ganho, Y_MAX))
+        y = graf_y + ((g_clamped - Y_MIN) / (Y_MAX - Y_MIN)) * graf_h
+        return x, y
+
+    # Fundo Branco e Grade Fina (1 em 1 kg)
+    c.setFillColor(BRANCO)
+    c.rect(graf_x, graf_y, graf_w, graf_h, fill=1, stroke=1)
+    c.setStrokeColor(colors.HexColor("#EAEAEA"))
+    c.setLineWidth(0.3)
+    
+    c.setFont("Helvetica", 6)
+    c.setFillColor(CINZA_ESCURO)
+    for sem in range(SEM_MIN, SEM_MAX + 1):
+        x, _ = coord(sem, Y_MIN)
+        c.line(x, graf_y, x, graf_y + graf_h)
+        c.drawCentredString(x, graf_y - 3*mm, str(sem))
+        
+    c.setFont("Helvetica-Bold", 7)
+    c.drawCentredString(graf_x + graf_w/2, graf_y - 10*mm, "← SEMANA DE GESTAÇÃO →")
+
+    c.setFont("Helvetica", 6)
+    for val_y in range(Y_MIN, Y_MAX + 1):
+        _, y = coord(SEM_MIN, val_y)
+        c.line(graf_x, y, graf_x + graf_w, y)
+        c.drawRightString(graf_x - 1.5*mm, y - 1*mm, str(val_y))
+    
+    c.saveState()
+    c.rotate(90)
+    c.setFont("Helvetica-Bold", 7)
+    c.drawCentredString(graf_y + graf_h/2, -(graf_x - 6*mm), "← GANHO DE PESO GESTACIONAL (kg) →")
+    c.restoreState()
+
+    # Marcações e Textos dos 3 Trimestres
+    c.setStrokeColor(CINZA_MEDIO); c.setLineWidth(1.5)
+    c.line(coord(13, Y_MIN)[0], graf_y, coord(13, Y_MIN)[0], graf_y + graf_h)
+    c.line(coord(27, Y_MIN)[0], graf_y, coord(27, Y_MIN)[0], graf_y + graf_h)
+    
+    c.setFont("Helvetica-Bold", 7)
+    c.drawCentredString(coord(11.5, Y_MIN)[0], graf_y - 6*mm, "1º Trimestre")
+    c.drawCentredString(coord(20, Y_MIN)[0], graf_y - 6*mm, "2º Trimestre")
+    c.drawCentredString(coord(33.5, Y_MIN)[0], graf_y - 6*mm, "3º Trimestre")
+
+    # === DESENHO DAS ZONAS EM ESCALA DE CINZA ===
+    C_FILL = colors.HexColor("#F0F0F0") # Sombreamento da zona recomendada
+    C_SAFE = colors.HexColor("#444444") # Linhas da zona de adequação (Sólidas)
+    C_OUT = colors.HexColor("#888888")  # Linhas fora da zona (Tracejadas)
+    
+    x_vals = list(range(10, 41))
+    keys_sorted = sorted(perc.keys(), key=lambda k: float(k.replace('P','')))
+    
+    # 1. Desenhar Área Sombreada (Fill)
+    y_bottom = perc[dados_ms["safe_min_key"]]
+    y_top = perc[dados_ms["safe_max_key"]]
+    c.setFillColor(C_FILL)
+    p = c.beginPath()
+    p.moveTo(*coord(x_vals[0], y_bottom[0]))
+    for i in range(1, len(x_vals)): p.lineTo(*coord(x_vals[i], y_bottom[i]))
+    for i in range(len(x_vals)-1, -1, -1): p.lineTo(*coord(x_vals[i], y_top[i]))
+    p.close()
+    c.drawPath(p, fill=1, stroke=0)
+
+    # 2. Desenhar as Linhas (Tracejadas vs Sólidas)
+    for k in keys_sorted:
+        is_safe = (k == dados_ms["safe_min_key"] or k == dados_ms["safe_max_key"])
+        c.setStrokeColor(C_SAFE if is_safe else C_OUT)
+        c.setLineWidth(1.5 if is_safe else 1.0)
+        
+        if not is_safe: c.setDash(3, 2)
+        else: c.setDash()
+        
+        y_vals = perc[k]
+        for i in range(len(x_vals)-1):
+            c.line(*coord(x_vals[i], y_vals[i]), *coord(x_vals[i+1], y_vals[i+1]))
+        
+        # Bolinhas brancas e Rótulos dos Percentis
+        c.setFillColor(BRANCO)
+        c.circle(coord(40, y_vals[-1])[0] + 3*mm, coord(40, y_vals[-1])[1], 2.5*mm, fill=1, stroke=1)
+        c.setFillColor(C_SAFE if is_safe else C_OUT)
+        c.setFont("Helvetica-Bold", 6.5)
+        c.drawCentredString(coord(40, y_vals[-1])[0] + 3*mm, coord(40, y_vals[-1])[1] - 1*mm, k)
+
+    # 3. Ponto da Paciente
+    x_pac, y_pac = coord(dados_g['semana'], res['ganho_atual'])
+    c.setStrokeColor(PRETO_TITULO)
+    c.setLineWidth(0.5); c.setDash(2,2)
+    c.line(graf_x, y_pac, x_pac, y_pac); c.line(x_pac, graf_y, x_pac, y_pac) 
+    c.setDash(); c.setFillColor(PRETO_TITULO)
+    c.circle(x_pac, y_pac, 2*mm, fill=1, stroke=1)
+    
+    # 4. Fonte
+    c.setFillColor(CINZA_ESCURO)
+    c.setFont("Helvetica", 5.5)
+    c.drawString(graf_x, graf_y - 15*mm, "Fonte: KAC, G. et al. Gestational weight gain charts: results from the Brazilian Maternal and Child Nutrition Consortium. Am. J. Clin. Nutr., v. 113, n. 5, p. 1351-1360, 2021. DOI: https://doi.org/10.1093/ajcn/nqaa402")
+
+    # ── TABELA DINÂMICA COM ANTI-OVERLAP ──
+    y_tab = graf_y - 20*mm
+    tab_data = [
+        ["Marcos Gestacionais", "Meta Mínima", "Meta Máxima"],
+        [f"Até 13 semanas (1º Trimestre)", f"{perc[dados_ms['safe_min_key']][3]:+.1f} kg", f"{perc[dados_ms['safe_max_key']][3]:+.1f} kg"],
+        [f"Até 27 semanas (2º Trimestre)", f"{perc[dados_ms['safe_min_key']][17]:+.1f} kg", f"{perc[dados_ms['safe_max_key']][17]:+.1f} kg"],
+        [f"Até 40 semanas (3º Trimestre)", f"{perc[dados_ms['safe_min_key']][-1]:+.1f} kg", f"{perc[dados_ms['safe_max_key']][-1]:+.1f} kg"]
+    ]
+    tab = Table(tab_data, colWidths=[75*mm, 45*mm, 45*mm])
+    tab.setStyle(TableStyle([
+        ("BACKGROUND", (0,0), (-1,0), CINZA_ESCURO), ("TEXTCOLOR", (0,0), (-1,0), BRANCO),
+        ("ALIGN", (0,0), (-1,-1), "CENTER"), ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"), 
+        ("FONTSIZE", (0,0), (-1,-1), 8), ("GRID", (0,0), (-1,-1), 0.5, CINZA_CLARO),
+        ("ROWBACKGROUNDS", (0,1), (-1,-1), [BRANCO, CINZA_FUNDO]),
+        ("TOPPADDING", (0,0), (-1,-1), 4), ("BOTTOMPADDING", (0,0), (-1,-1), 4)
+    ]))
+    
+    # O ReportLab avalia a altura da tabela e joga os Desafios exatamente pra baixo dela
+    w_tab, h_tab = tab.wrapOn(c, W, H)
+    tab.drawOn(c, 22.5*mm, y_tab - h_tab)
+
+    # ── ESPAÇO DE DESAFIOS ──
+    y_desafios = y_tab - h_tab - 10*mm
+    y_desafios = _titulo_secao_mono(c, y_desafios, "5. MEUS DESAFIOS E DIFICULDADES (Espaço da Paciente)")
+    y_desafios -= 4*mm
+    
+    c.setFont("Helvetica-BoldOblique", 9); c.setFillColor(PRETO_TEXTO)
+    c.drawString(15*mm, y_desafios, "O que foi mais difícil de seguir na dieta ou nos conselhos que combinamos?")
+    
+    y_desafios -= 5*mm
+    c.setFont("Helvetica", 8.5); c.setFillColor(CINZA_ESCURO)
+    c.drawString(15*mm, y_desafios, "Anote abaixo suas dúvidas e barreiras. Leve este papel na próxima consulta.")
+
+    y_linhas = y_desafios - 12*mm
+    c.setStrokeColor(CINZA_MEDIO); c.setLineWidth(0.5); c.setDash(1, 2)
+    for _ in range(4): 
+        c.line(15*mm, y_linhas, 195*mm, y_linhas)
+        y_linhas -= 9*mm
+    c.setDash()
+
+    _rodape_pagina_mono(c, dados_g['nome'], 2)
+    c.showPage()
+    c.save()
+
+    # ESSA É A LINHA MÁGICA QUE FALTAVA (Ela devolve o PDF gerado)
     return buf.getvalue()

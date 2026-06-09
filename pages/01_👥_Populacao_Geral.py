@@ -20,13 +20,77 @@ st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     html, body, [class*="st-"] { font-family: 'Inter', sans-serif !important; color: #1D361F !important; }
-    /* --- FIX DO MENU LATERAL (Protege os ícones do Streamlit) --- */
-    i, .material-symbols-rounded, [data-testid="stSidebarCollapseButton"] span, [data-testid="stSidebarCollapseButton"] svg { 
-    font-family: "Material Symbols Rounded", "Material Icons" !important; 
+    
+    /* --- PROTEÇÃO ABSOLUTA DE ÍCONES (NOVA REGRA ATIVADA) --- */
+    .material-icons, 
+    .material-symbols-rounded, 
+    [data-testid*="Icon"], 
+    [data-testid*="Icon"] *, 
+    [data-testid="stSidebarCollapseButton"] *, 
+    [data-testid="collapsedControl"] *,
+    [class*="icon"] {
+        font-family: "Material Symbols Rounded", "Material Icons" !important;
     }
+    
     .main { background-color: #ECE5DF !important; padding: 2rem !important; }
     [data-testid="stAppViewContainer"] { background-color: #ECE5DF !important; }
-    [data-testid="stSidebar"] { background-color: #DFC8B6 !important; border-right: 1px solid #C4C7B6; }
+
+    /* ===================== SIDEBAR (TEMA CLARO & ELEGANTE) ===================== */
+    [data-testid="stSidebar"] {
+        background-color: #F7F9F7 !important; /* Fundo super claro */
+        border-right: 1px solid #E2EBE3 !important; /* Borda sutil */
+        box-shadow: 2px 0 10px rgba(0,0,0,0.02);
+    }
+    [data-testid="stSidebarNav"] { display: none !important; }
+
+    .sidebar-logo {
+        padding: 2rem 1.4rem 1.4rem 1.4rem;
+        border-bottom: 1px solid #E2EBE3;
+        margin-bottom: 1.4rem;
+    }
+    .sidebar-logo .logo-title {
+        font-size: 1.3rem; font-weight: 700; color: #1D361F; letter-spacing: -0.02em;
+    }
+    .sidebar-logo .logo-sub {
+        font-size: 0.75rem; color: #5A7260; margin-top: 0.2rem;
+    }
+
+    .nav-group-label {
+        font-size: 0.65rem; font-weight: 700; letter-spacing: 0.10em;
+        text-transform: uppercase; color: #859B48;
+        padding: 0 1.4rem; margin-bottom: 0.4rem;
+    }
+
+    [data-testid="stSidebar"] [data-testid="stPageLink"] { margin: 0 0.7rem 0.15rem 0.7rem !important; }
+    [data-testid="stSidebar"] [data-testid="stPageLink"] a {
+        display: flex !important; align-items: center !important; gap: 0.55rem !important;
+        padding: 0.6rem 0.85rem !important; border-radius: 9px !important;
+        font-size: 0.88rem !important; font-weight: 600 !important;
+        color: #2D5A34 !important; text-decoration: none !important;
+        transition: background 0.15s ease, color 0.15s ease !important;
+        background: transparent !important;
+    }
+    [data-testid="stSidebar"] [data-testid="stPageLink"] a:hover {
+        background: #E8F0E9 !important; color: #1D361F !important;
+    }
+
+    /* --- FIX DEFINITIVO DO FOOTER DA SIDEBAR (MÁGICA DO FLEXBOX) --- */
+    [data-testid="stSidebarUserContent"] {
+        display: flex !important;
+        flex-direction: column !important;
+        min-height: 92vh !important;
+    }
+    
+    .sidebar-footer {
+        margin-top: auto !important; 
+        text-align: center !important;
+        font-size: 0.68rem !important;
+        color: #8A9A8E !important;
+        line-height: 1.6 !important;
+        padding-bottom: 1rem !important;
+    }
+
+    /* ===================== ESTILOS ESPECÍFICOS DA PÁGINA ===================== */
     h1, h2, h3 { color: #1D361F !important; font-weight: 700 !important; }
     h1 { font-size: 2.2rem !important; margin-bottom: 0.5rem !important; }
     h2 { font-size: 1.5rem !important; margin-top: 1rem !important; margin-bottom: 1.2rem !important; border-bottom: 2px solid #C4C7B6; padding-bottom: 10px; }
@@ -48,6 +112,33 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# ==========================================
+# SIDEBAR PADRONIZADA
+# ==========================================
+with st.sidebar:
+    st.markdown("""
+        <div class="sidebar-logo">
+            <div class="logo-title">🍏 NutriAPS</div>
+            <div class="logo-sub">Atenção Primária à Saúde</div>
+        </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<div class="nav-group-label">Menu</div>', unsafe_allow_html=True)
+    st.page_link("app.py",                         label="🏠  Início")
+    st.page_link("pages/01_👥_Populacao_Geral.py", label="👥  População Geral")
+    st.page_link("pages/02_🤰_Gestantes.py",       label="🤰  Gestantes")
+
+    st.markdown("""
+        <div class="sidebar-footer">
+            NutriAPS · v1.0<br>
+            Residência Multiprofissional<br>
+            Atenção Básica - 2026
+        </div>
+    """, unsafe_allow_html=True)
+
+# ==========================================
+# INTERFACE PRINCIPAL
+# ==========================================
 main_col_1, main_col_2, main_col_3 = st.columns([1, 8, 1])
 
 with main_col_2:
