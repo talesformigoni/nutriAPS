@@ -1227,3 +1227,199 @@ def gerar_pdf_gestante(dados_g):
 
     # ESSA É A LINHA MÁGICA QUE FALTAVA (Ela devolve o PDF gerado)
     return buf.getvalue()
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PDF ESPECÍFICO DO IDOSO (Focado em clareza, mastigação e longevidade)
+# ═══════════════════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════════════════
+# PDF ESPECÍFICO DO IDOSO (Padrão MS Grayscale Print-Friendly + 10 Passos)
+# ═══════════════════════════════════════════════════════════════════════════
+def gerar_pdf_idoso(nome, idade, sexo, peso, altura, imc, classif_imc,
+                    tmb, get, formula_nome, risco, explicacao, respostas_hab):
+    import datetime
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.lib.units import mm
+    from reportlab.platypus import Paragraph
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.enums import TA_JUSTIFY
+    from io import BytesIO
+
+    buf = BytesIO()
+    c = canvas.Canvas(buf, pagesize=A4)
+    W, H = A4
+
+    # PALETA MONOCROMÁTICA IMPRESSÃO-FRIENDLY
+    PRETO_TITULO = colors.HexColor("#000000")
+    PRETO_TEXTO = colors.HexColor("#222222")
+    CINZA_ESCURO = colors.HexColor("#555555")
+    CINZA_CLARO = colors.HexColor("#DDDDDD")
+    CINZA_FUNDO = colors.HexColor("#EEEEEE")
+    BRANCO = colors.white
+
+    meses = ["", "janeiro", "fevereiro", "março", "abril", "maio", "junho", 
+             "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"]
+    hoje = datetime.datetime.now()
+    data_formatada = f"Gerado em {hoje.day:02d} de {meses[hoje.month]} de {hoje.year}"
+
+    # Estilos seguros de parágrafo para não vazar texto
+    estilo_texto = ParagraphStyle('Texto', fontName='Helvetica', fontSize=9, textColor=CINZA_ESCURO, alignment=TA_JUSTIFY, leading=13)
+    
+    classif_curta = _limpar(classif_imc).upper()
+    if classif_curta == "ADEQUADO OU EUTRÓFICO": classif_curta = "EUTRÓFICO"
+
+    # --- PÁGINA 1: Capa e Biometria ---
+    c.setFillColor(CINZA_FUNDO)
+    c.rect(0, H - 65*mm, W, 65*mm, fill=1, stroke=0)
+    
+    c.setFillColor(PRETO_TITULO)
+    c.setFont("Helvetica-Bold", 22)
+    c.drawString(15*mm, H - 25*mm, "Mapa de Saúde Nutricional")
+
+    c.setFont("Helvetica", 11)
+    c.setFillColor(CINZA_ESCURO)
+    c.drawString(15*mm, H - 32*mm, "Atenção Primária à Saúde | Saúde da Pessoa Idosa")
+    c.setFont("Helvetica", 9)
+    c.drawString(15*mm, H - 37*mm, "Avaliação Geriátrica e Orientações (VAN/MS)")
+
+    c.setFillColor(PRETO_TITULO)
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(15*mm, H - 48*mm, _limpar(nome).upper())
+    
+    c.setFont("Helvetica", 9)
+    c.setFillColor(CINZA_ESCURO)
+    c.drawString(15*mm, H - 54*mm, data_formatada)
+
+    # Cards de Métricas Rápidas
+    larg_card = 52*mm
+    y_cards = H - 85*mm
+    _tag_metrica_mono(c, 15*mm, y_cards, larg_card, "GASTO ENERGIA", f"{get:.0f} kcal")
+    _tag_metrica_mono(c, 71*mm, y_cards, larg_card, "PESO ATUAL", f"{peso:.1f} kg")
+    _tag_metrica_mono(c, 127*mm, y_cards, larg_card, "IMC GERIÁTRICO", f"{imc:.1f}")
+    
+    _card_mono(c, 127*mm, y_cards - 12*mm, larg_card, 7*mm, cor_fundo=CINZA_CLARO)
+    c.setFillColor(PRETO_TEXTO)
+    c.setFont("Helvetica-Bold", 7.5)
+    c.drawCentredString(127*mm + larg_card/2, y_cards - 9*mm, classif_curta)
+
+    # SEÇÃO 1: Identificação (Rótulos curtos para não bugar)
+    y = y_cards - 25*mm
+    y = _titulo_secao_mono(c, y, "1. IDENTIFICAÇÃO E BIOMETRIA")
+    y -= 5*mm
+    y = _linha_info_mono(c, y, "Nome Completo:", nome, fundo=True)
+    y = _linha_info_mono(c, y, "Idade:", f"{idade} anos", fundo=False)
+    y = _linha_info_mono(c, y, "Estatura (Altura):", f"{altura} cm", fundo=True)
+    y = _linha_info_mono(c, y, "Classificação (VAN/MS):", classif_curta, fundo=False)
+    y -= 8*mm
+
+    # SEÇÃO 2: Cuidados Essenciais
+    y = _titulo_secao_mono(c, y, "2. CUIDADOS ESSENCIAIS NO DIA A DIA")
+    y -= 4*mm
+    
+    texto_cuidados = (
+        "<b>• Hidratação é Remédio:</b> Beba água mesmo sem estar com sede. Com o passar dos anos, "
+        "o corpo não avisa sobre a sede corretamente. A falta de água causa confusão mental, intestino preso e tonturas.<br/><br/>"
+        "<b>• Atenção à Mastigação:</b> Se estiver difícil mastigar ou engolir, não deixe de comer carnes e frutas. "
+        "Amasse bem, faça na forma de purês, desfie as carnes ou faça carne moída. Sopas com pedaços macios são excelentes.<br/><br/>"
+        "<b>• Menos Sal, Mais Sabor:</b> A capacidade de sentir o gosto do sal diminui na terceira idade, o que faz a "
+        "gente querer colocar mais. Evite o saleiro na mesa. Capriche no alho, cebola, limão, orégano e ervas.<br/><br/>"
+        "<b>• Força e Ossos:</b> Não deixe de consumir proteínas (ovos, queijos, carnes) para evitar fraqueza nas pernas. "
+        "E lembre-se: tomar 15 minutos de sol pela manhã ajuda a fixar o cálcio nos ossos."
+    )
+    p = Paragraph(texto_cuidados, estilo_texto)
+    w_p, h_p = p.wrap(175*mm, 80*mm)
+    y -= h_p
+    p.drawOn(c, 18*mm, y)
+
+    _rodape_pagina_mono(c, nome, c.getPageNumber())
+    c.showPage()
+
+    # --- PÁGINA 2: Hábitos e PRAR ---
+    _cabecalho_pagina_mono(c, "Avaliação de Hábitos Alimentares")
+    
+    y = H - 35*mm
+    y = _titulo_secao_mono(c, y, "3. DIAGNÓSTICO DO RISCO ALIMENTAR")
+
+    y -= 4*mm
+    _card_mono(c, 15*mm, y - 10*mm, W - 30*mm, 10*mm, cor_fundo=CINZA_FUNDO)
+    c.setFillColor(PRETO_TITULO)
+    c.setFont("Helvetica-Bold", 10)
+    c.drawCentredString(W/2, y - 6.5*mm, f"NÍVEL DE RISCO IDENTIFICADO: {risco.upper()}")
+    y -= 16*mm
+
+    p_exp = Paragraph(_limpar(explicacao), estilo_texto)
+    w_e, h_e = p_exp.wrap(175*mm, 40*mm)
+    y -= h_e
+    p_exp.drawOn(c, 18*mm, y)
+    y -= 10*mm
+
+    y = _titulo_secao_mono(c, y, "RESUMO DO INQUÉRITO CLÍNICO")
+    y -= 2*mm
+
+    for i, (pergunta, resposta) in enumerate(respostas_hab):
+        if resposta is None: continue
+        resp_limpa = str(resposta).split(" (")[0]
+        fundo = CINZA_FUNDO if i % 2 == 0 else BRANCO
+        
+        c.setFillColor(fundo)
+        c.setStrokeColor(CINZA_CLARO)
+        c.setLineWidth(0.3)
+        c.rect(15*mm, y - 6*mm, W - 30*mm, 8*mm, fill=1, stroke=1)
+
+        c.setFont("Helvetica-Bold", 7.5)
+        c.setFillColor(PRETO_TEXTO)
+        c.drawString(18*mm, y - 2*mm, _limpar(pergunta)[:70])
+
+        c.setFont("Helvetica", 7.5)
+        c.setFillColor(CINZA_ESCURO)
+        c.drawRightString(W - 18*mm, y - 2*mm, _limpar(resp_limpa))
+        y -= 8*mm
+
+    _rodape_pagina_mono(c, nome, c.getPageNumber())
+    c.showPage()
+
+    # --- PÁGINA 3: Os 10 Passos do Ministério da Saúde ---
+    _cabecalho_pagina_mono(c, "Dez Passos para a Alimentação Saudável")
+    
+    y = H - 35*mm
+    c.setFillColor(PRETO_TITULO)
+    c.setFont("Helvetica-Bold", 11)
+    c.drawCentredString(W/2, y, "10 PASSOS PARA UMA ALIMENTAÇÃO SAUDÁVEL PARA PESSOAS IDOSAS")
+    y -= 5*mm
+    c.setFont("Helvetica", 8)
+    c.setFillColor(CINZA_ESCURO)
+    c.drawCentredString(W/2, y, "Baseado no Manual do Ministério da Saúde (Edição 2010)")
+    y -= 12*mm
+
+    passos = [
+        "<b>1º PASSO:</b> Faça pelo menos três refeições (café da manhã, almoço e jantar) e dois lanches saudáveis por dia. Não pule as refeições e mastigue bem os alimentos.",
+        "<b>2º PASSO:</b> Inclua diariamente seis porções do grupo dos cereais (arroz, milho, trigo, pães e massas), tubérculos como a batata e raízes nas refeições. Dê preferência aos grãos integrais.",
+        "<b>3º PASSO:</b> Coma diariamente pelo menos três porções de legumes e verduras como parte das refeições e três porções ou mais de frutas nas sobremesas e lanches.",
+        "<b>4º PASSO:</b> Coma feijão com arroz todos os dias ou, pelo menos, cinco vezes por semana. Esse prato brasileiro é uma combinação completa de proteínas e bom para a saúde.",
+        "<b>5º PASSO:</b> Consuma diariamente três porções de leite e derivados e uma porção de carnes, aves, peixes ou ovos. Retire a gordura aparente das carnes.",
+        "<b>6º PASSO:</b> Consuma, no máximo, uma porção por dia de óleos vegetais, azeite, manteiga ou margarina. Evite frituras e salgadinhos.",
+        "<b>7º PASSO:</b> Evite refrigerantes e sucos industrializados, bolos, biscoitos doces e recheados, sobremesas e outras guloseimas. Coma-os, no máximo, duas vezes por semana.",
+        "<b>8º PASSO:</b> Diminua a quantidade de sal na comida e retire o saleiro da mesa. Use temperos como cheiro verde, alho, cebola e ervas frescas e secas.",
+        "<b>9º PASSO:</b> Beba pelo menos dois litros (seis a oito copos) de água por dia. Dê preferência ao consumo de água nos intervalos das refeições.",
+        "<b>10º PASSO:</b> Torne sua vida mais saudável. Pratique pelo menos 30 minutos de atividade física todos os dias, evite bebidas alcoólicas e o fumo."
+    ]
+
+    for passo in passos:
+        p_passo = Paragraph(passo, estilo_texto)
+        w_p, h_p = p_passo.wrap(175*mm, 30*mm)
+        
+        # Garante que não corte o texto no final da página
+        if (y - h_p) < 20*mm:
+            _rodape_pagina_mono(c, nome, c.getPageNumber())
+            c.showPage()
+            _cabecalho_pagina_mono(c, "Dez Passos para a Alimentação Saudável (Cont.)")
+            y = H - 35*mm
+        
+        p_passo.drawOn(c, 18*mm, y - h_p)
+        y -= (h_p + 6*mm) # Espaçamento confortável entre cada passo
+
+    _rodape_pagina_mono(c, nome, c.getPageNumber())
+    
+    c.save()
+    return buf.getvalue()

@@ -11,70 +11,34 @@ def injetar_css():
         html, body, [class*="st-"] { font-family: 'Inter', sans-serif !important; color: #1D361F !important; }
 
         /* Proteção dos ícones */
-        .material-icons, .material-symbols-rounded,
-        [data-testid*="Icon"], [data-testid*="Icon"] *,
-        [data-testid="stSidebarCollapseButton"] *,
-        [data-testid="collapsedControl"] *, [class*="icon"] {
+        .material-icons, .material-symbols-rounded, [data-testid*="Icon"], [data-testid*="Icon"] *, [data-testid="stSidebarCollapseButton"] *, [data-testid="collapsedControl"] *, [class*="icon"] {
             font-family: "Material Symbols Rounded", "Material Icons" !important;
         }
 
         .main { background-color: #ECE5DF !important; padding: 2rem !important; }
         [data-testid="stAppViewContainer"] { background-color: #ECE5DF !important; }
 
-        /* ===================== SIDEBAR (TEMA CLARO & ELEGANTE) ===================== */
+        /* ===================== SIDEBAR ===================== */
         [data-testid="stSidebar"] {
-            background-color: #F7F9F7 !important; /* Fundo super claro */
-            border-right: 1px solid #E2EBE3 !important; /* Borda sutil */
+            background-color: #F7F9F7 !important; border-right: 1px solid #E2EBE3 !important;
             box-shadow: 2px 0 10px rgba(0,0,0,0.02);
         }
         [data-testid="stSidebarNav"] { display: none !important; }
-
-        .sidebar-logo {
-            padding: 2rem 1.4rem 1.4rem 1.4rem;
-            border-bottom: 1px solid #E2EBE3;
-            margin-bottom: 1.4rem;
-        }
-        .sidebar-logo .logo-title {
-            font-size: 1.3rem; font-weight: 700; color: #1D361F; letter-spacing: -0.02em;
-        }
-        .sidebar-logo .logo-sub {
-            font-size: 0.75rem; color: #5A7260; margin-top: 0.2rem;
-        }
-
-        .nav-group-label {
-            font-size: 0.65rem; font-weight: 700; letter-spacing: 0.10em;
-            text-transform: uppercase; color: #859B48;
-            padding: 0 1.4rem; margin-bottom: 0.4rem;
-        }
-
+        .sidebar-logo { padding: 0rem 1.4rem 1.4rem 1.4rem; border-bottom: 1px solid #E2EBE3; margin-bottom: 1.4rem; }
+        .sidebar-logo .logo-title { font-size: 1.3rem; font-weight: 700; color: #1D361F; letter-spacing: -0.02em; }
+        .sidebar-logo .logo-sub { font-size: 0.75rem; color: #5A7260; margin-top: 0.2rem; }
+        .nav-group-label { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: #859B48; padding: 0 1.4rem; margin-bottom: 0.4rem; }
+        
         [data-testid="stSidebar"] [data-testid="stPageLink"] { margin: 0 0.7rem 0.15rem 0.7rem !important; }
         [data-testid="stSidebar"] [data-testid="stPageLink"] a {
             display: flex !important; align-items: center !important; gap: 0.55rem !important;
             padding: 0.6rem 0.85rem !important; border-radius: 9px !important;
-            font-size: 0.88rem !important; font-weight: 600 !important;
-            color: #2D5A34 !important; text-decoration: none !important;
-            transition: background 0.15s ease, color 0.15s ease !important;
-            background: transparent !important;
+            font-size: 0.88rem !important; font-weight: 600 !important; color: #2D5A34 !important; text-decoration: none !important;
         }
-        [data-testid="stSidebar"] [data-testid="stPageLink"] a:hover {
-            background: #E8F0E9 !important; color: #1D361F !important;
-        }
+        [data-testid="stSidebar"] [data-testid="stPageLink"] a:hover { background: #E8F0E9 !important; color: #1D361F !important; }
 
-        /* --- FIX DEFINITIVO DO FOOTER DA SIDEBAR (MÁGICA DO FLEXBOX) --- */
-        [data-testid="stSidebarUserContent"] {
-            display: flex !important;
-            flex-direction: column !important;
-            min-height: 92vh !important; /* Força o contêiner a esticar verticalmente */
-        }
-        
-        .sidebar-footer {
-            margin-top: auto !important; /* Empurra o elemento para a base do contêiner flexível */
-            text-align: center !important;
-            font-size: 0.68rem !important;
-            color: #8A9A8E !important;
-            line-height: 1.6 !important;
-            padding-bottom: 1rem !important;
-        }
+        [data-testid="stSidebarUserContent"] { padding-top: 1.5rem !important; display: flex !important; flex-direction: column !important; min-height: 92vh !important; }
+        .sidebar-footer { margin-top: auto !important; text-align: center !important; font-size: 0.68rem !important; color: #8A9A8E !important; line-height: 1.6 !important; padding-bottom: 1rem !important; }
 
         /* ===================== HERO BANNER ===================== */
         .hero-banner {
@@ -153,7 +117,7 @@ if "current_module" not in st.session_state or st.session_state["current_module"
     st.session_state["current_module"] = "home"
 
 # ==========================================
-# SIDEBAR (CLEAN THEME)
+# SIDEBAR
 # ==========================================
 with st.sidebar:
     st.markdown("""
@@ -167,11 +131,33 @@ with st.sidebar:
     st.page_link("app.py",                         label="🏠  Início")
     st.page_link("pages/01_👥_Populacao_Geral.py", label="👥  População Geral")
     st.page_link("pages/02_🤰_Gestantes.py",       label="🤰  Gestantes")
+    st.page_link("pages/03_👴_Idosos.py",          label="👴  Idosos")
 
-    # Rodapé perfeitamente isolado e empurrado pelo Flexbox
+    # --- CSS EXCLUSIVO E TÍTULO PARA O PRAR ---
+    st.markdown("""
+        <style>
+        /* Caça especificamente o link do PRAR e transforma numa "Box" */
+        a[href$="Protocolo_PRAR"] {
+            background-color: #F0F6F1 !important; /* Fundo verdinho bem claro */
+            border: 1px solid #C4C7B6 !important; /* Bordinha marcando o destaque */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.03) !important;
+        }
+        a[href$="Protocolo_PRAR"]:hover {
+            background-color: #E8F0E9 !important;
+            border-color: #859B48 !important;
+        }
+        </style>
+        
+        <div class="nav-group-label" style="margin-top: 1.8rem;">Apoio Clínico</div>
+    """, unsafe_allow_html=True)
+
+    # O link do PRAR é renderizado aqui embaixo do novo título
+    st.page_link("pages/04_📚_Protocolo_PRAR.py",  label="📚  Protocolo PRAR")
+
+    # O Rodapé fica logo abaixo
     st.markdown("""
         <div class="sidebar-footer">
-            NutriAPS · v1.0<br>
+            NutriAPS · v2.0<br>
             Residência Multiprofissional<br>
             Atenção Básica - 2026
         </div>
@@ -202,7 +188,7 @@ with main_col:
     )
 
     # --- CARDS CLICÁVEIS NATIVOS ---
-    col1, col2 = st.columns(2, gap="large")
+    col1, col2, col3 = st.columns(3, gap="large")
 
     with col1:
         st.markdown("""
@@ -240,6 +226,26 @@ with main_col:
                         <span class="tag">Curva MS 2026</span>
                         <span class="tag">DMG · HAS</span>
                         <span class="tag">Diário Clínico</span>
+                    </div>
+                    <span class="card-arrow">↗</span>
+                </div>
+            </a>
+        """, unsafe_allow_html=True)
+
+    with col3: # <-- NOVO BLOCO DO CARD DOS IDOSOS
+        st.markdown("""
+            <a href="Idosos" target="_self" class="card-link">
+                <div class="card-wrapper">
+                    <span class="card-icon">👴</span>
+                    <div class="card-title">Idosos</div>
+                    <div class="card-desc">
+                        Avaliação nutricional geriátrica, adequação de recordatório para fácil mastigação 
+                        e recomendações direcionadas à longevidade e autonomia.
+                    </div>
+                    <div class="card-tags">
+                        <span class="tag">Geriatria</span>
+                        <span class="tag">Cálculos Específicos</span>
+                        <span class="tag">Recomendações</span>
                     </div>
                     <span class="card-arrow">↗</span>
                 </div>

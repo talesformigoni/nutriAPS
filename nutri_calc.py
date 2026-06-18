@@ -1,14 +1,31 @@
 import math
 
-def calcular_imc(peso, altura_cm):
+def calcular_imc(peso, altura_cm, idade=None):
+    """
+    Calcula o IMC e aplica as diretrizes do Ministério da Saúde 
+    específicas para Adultos (<60 anos) e Idosos (>=60 anos).
+    """
     altura_m = altura_cm / 100
     imc = peso / (altura_m ** 2)
-    if imc < 18.5:   classif = "Magreza"
-    elif imc < 25:   classif = "Eutrofia"
-    elif imc < 30:   classif = "Sobrepeso"
-    elif imc < 35:   classif = "Obesidade G.I"
-    elif imc < 40:   classif = "Obesidade G.II"
-    else:            classif = "Obesidade G.III"
+    
+    # Classificação para Idosos (≥ 60 anos) segundo VAN/MS
+    if idade is not None and idade >= 60:
+        if imc <= 22.0:
+            classif = "Baixo Peso"
+        elif imc < 27.0:
+            classif = "Adequado ou Eutrófico"
+        else:
+            classif = "Sobrepeso"
+            
+    # Classificação para Adultos (< 60 anos) segundo VAN/MS
+    else:
+        if imc < 18.5:   classif = "Magreza"
+        elif imc < 25.0: classif = "Eutrofia"
+        elif imc < 30.0: classif = "Sobrepeso"
+        elif imc < 35.0: classif = "Obesidade G.I"
+        elif imc < 40.0: classif = "Obesidade G.II"
+        else:            classif = "Obesidade G.III"
+        
     return imc, classif
 
 def calcular_necessidades_energeticas(peso, altura_cm, idade, sexo, atividade, is_atleta=False, bf=None):
@@ -20,7 +37,7 @@ def calcular_necessidades_energeticas(peso, altura_cm, idade, sexo, atividade, i
         "Muito Intenso (atleta / trabalho físico pesado)": 1.9,
     }
     
-    imc, _ = calcular_imc(peso, altura_cm)
+    imc, _ = calcular_imc(peso, altura_cm, idade)
     formula_utilizada = ""
 
     # Lógica de seleção automática da fórmula
@@ -30,12 +47,12 @@ def calcular_necessidades_energeticas(peso, altura_cm, idade, sexo, atividade, i
         tmb = 25.9 * ffm
         formula_utilizada = "Tinsley (Atletas)"
     elif imc < 25:
-        # Harris-Benedict revisada (1984) - Recomendada para Eutróficos
+        # Harris-Benedict revisada (1984) - Recomendada para Eutróficos e Baixo Peso
         if sexo == "Masculino":
             tmb = 88.362 + (13.397 * peso) + (4.799 * altura_cm) - (5.677 * idade)
         else:
             tmb = 447.593 + (9.247 * peso) + (3.098 * altura_cm) - (4.330 * idade)
-        formula_utilizada = "Harris-Benedict (Eutróficos)"
+        formula_utilizada = "Harris-Benedict (Eutróficos / Baixo Peso)"
     else:
         # Mifflin-St Jeor - Recomendada para Sobrepeso e Obesidade
         if sexo == "Masculino":

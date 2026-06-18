@@ -3,17 +3,18 @@ import math
 import pandas as pd
 import datetime
 
+# Importando as funções do seu arquivo de cálculos e geradores
 from nutri_calc import calcular_imc, calcular_necessidades_energeticas, extrair_ponto
-from nutri_pdf import gerar_pdf_paciente
+from nutri_pdf import gerar_pdf_idoso
 from nutri_foods import carregar_tabela_alimentos
 from nutri_ia import gerar_cardapio_ia
 
-st.set_page_config(page_title="População Geral | NutriAPS", layout="wide")
+st.set_page_config(page_title="Idosos | NutriAPS", layout="wide")
 
-# REGRA DE OURO DO MULTIPÁGINAS
-if "current_module" not in st.session_state or st.session_state["current_module"] != "geral":
+# REGRA DE OURO DO MULTIPÁGINAS (Isolando a sessão)
+if "current_module" not in st.session_state or st.session_state["current_module"] != "idosos":
     st.session_state.clear()
-    st.session_state["current_module"] = "geral"
+    st.session_state["current_module"] = "idosos"
 
 # INJEÇÃO DE CSS
 st.markdown("""
@@ -126,23 +127,24 @@ with st.sidebar:
 main_col_1, main_col_2, main_col_3 = st.columns([1, 8, 1])
 
 with main_col_2:
-    st.title("Atendimento: População Geral")
+    st.title("Atendimento: Pessoa Idosa")
     st.markdown("---")
 
     st.header("1. Dados Biométricos")
     with st.container():
         col1, col2 = st.columns(2)
         with col1:
-            nome = st.text_input("Nome Completo", placeholder="Ex: Maria da Silva")
-            idade = st.number_input("Idade (anos)", min_value=0, max_value=120, value=30, step=1)
+            nome = st.text_input("Nome Completo", placeholder="Ex: João da Silva")
+            # Min_value fixado em 60 para garantir que o IMC use a regra correta do seu nutri_calc
+            idade = st.number_input("Idade (anos)", min_value=60, max_value=120, value=65, step=1)
             sexo = st.selectbox("Sexo biológico", ["Feminino", "Masculino"])
         with col2:
-            peso = st.number_input("Peso (kg)", min_value=1.0, max_value=300.0, value=70.0, step=0.5)
-            altura = st.number_input("Altura (cm)", min_value=50, max_value=230, value=170, step=1)
+            peso = st.number_input("Peso (kg)", min_value=1.0, max_value=300.0, value=65.0, step=0.5)
+            altura = st.number_input("Altura (cm)", min_value=50, max_value=230, value=160, step=1)
             atividade = st.selectbox(
                 "Nível de Atividade Física",
                 [
-                    "Sedentário (sem exercício / trabalho sentado)",
+                    "Sedentario (sem exercício / trabalho sentado)",
                     "Leve (caminhada ou exercício leve 1-3x/sem)",
                     "Moderado (exercício 3-5x/sem)",
                     "Intenso (exercício pesado 6-7x/sem)",
@@ -151,7 +153,7 @@ with main_col_2:
             )
 
     if altura > 0:
-        # Puxa o cálculo oficial com a regra de idade (Adulto vs Idoso)
+        # A sua função calcular_imc já identifica que a idade >= 60 e usa a classificação VAN/MS
         imc_rt, classif_rt = calcular_imc(peso, altura, idade)
         
         st.markdown(f"""
@@ -180,7 +182,7 @@ with main_col_2:
     respostas = []
     with st.container():
         for i, (pergunta, opcoes) in enumerate(perguntas):
-            resp = st.radio(f"{i+1}. {pergunta}:", opcoes, key=f"q{i}", horizontal=True)
+            resp = st.radio(f"{i+1}. {pergunta}:", opcoes, key=f"q_idoso_{i}", horizontal=True)
             respostas.append((pergunta, resp))
             if i < len(perguntas) - 1: st.markdown("<hr style='margin: 10px 0; border-top: 1px solid #C4C7B6;'>", unsafe_allow_html=True)
 
@@ -208,17 +210,20 @@ with main_col_2:
                     peso=peso, altura_cm=altura, idade=idade, sexo=sexo, atividade=atividade, is_atleta=False, bf=None,
                 )
 
-                # Aplica a mesma regra inteligente antes de gerar o PDF
                 imc, classif_imc = calcular_imc(peso, altura, idade)
 
+                # Laudos focados em linguagem bem simples e de fácil entendimento
                 if perc_risco <= 0.33:
-                    risco, cor, explicacao = "Baixo", "#859B48", "Parabéns! Seus hábitos são protetores da saúde. Continue priorizando alimentos in natura."
+                    risco, cor = "Baixo", "#859B48"
+                    explicacao = "Que bom! Seus costumes ajudam muito sua saúde. Continue comendo comida de verdade e bebendo bastante água."
                 elif perc_risco <= 0.66:
-                    risco, cor, explicacao = "Moderado", "#D97706", "Você tem uma boa base, mas há espaço importante para melhorias. Vamos trabalhar trocas graduais."
+                    risco, cor = "Moderado", "#D97706"
+                    explicacao = "Você já faz coisas boas, mas podemos melhorar um pouco para você ter mais força. Vamos trocar algumas coisas devagar, sem pressa."
                 else:
-                    risco, cor, explicacao = "Alto", "#DC2626", "Atenção: vários hábitos da sua rotina aumentam o risco de doenças crônicas. Vamos focar em mudanças graduais."
+                    risco, cor = "Alto", "#DC2626"
+                    explicacao = "Atenção: algumas coisas no seu dia a dia não estão fazendo bem. Vamos arrumar isso aos poucos para você viver melhor, com mais energia e saúde."
 
-                st.session_state["dados_paciente"] = {
+                st.session_state["dados_paciente_idoso"] = {
                     "nome": nome, "idade": idade, "sexo": sexo, "peso": float(peso),
                     "altura": float(altura), "tmb": float(tmb), "get": float(get),
                     "imc": float(imc), "classif_imc": classif_imc, "is_gestante": False
@@ -232,17 +237,27 @@ with main_col_2:
 
                 st.write(f"📝 Fórmula selecionada: {formula_nome}")
 
-                laudo_html = f"""
-                <div class="laudo-box" style="border-top-color: {cor};">
-                    <h3 style="color: {cor}; margin-top: 0;">Diagnóstico Clínico — {nome}</h3>
-                    <p style="margin-bottom:8px;"><strong>Risco Alimentar: <span style="color:{cor};">{risco}</span></strong></p>
-                    <p style="line-height:1.6;">{explicacao}</p>
-                    <div style="margin-top: 15px; font-size: 0.9rem; color: #666;">Pontuação PRAR Final: {total_pontos}/{max_pontos}</div>
-                </div>
-                """
+                laudo_html = (
+                    f'<div class="laudo-box" style="border-top-color: {cor};">'
+                    f'<h3 style="color: {cor}; margin-top: 0;">Diagnóstico — {nome}</h3>'
+                    f'<p style="margin-bottom:8px;"><strong>Risco Alimentar: <span style="color:{cor};">{risco}</span></strong></p>'
+                    f'<p style="line-height:1.6; font-size: 1.1rem;">{explicacao}</p>'
+                    f'<hr style="margin: 20px 0;">'
+                    f'<h4 style="color: #2D5A34; margin-bottom: 10px;">Dicas de Ouro para o Dia a Dia:</h4>'
+                    f'<ul style="line-height: 1.8; color: #1D361F; margin-left: 20px;">'
+                    f'<li>💧 <strong>Beba água</strong> mesmo sem estar com sede. Deixe uma garrafinha perto.</li>'
+                    f'<li>🥚 <strong>Coma ovos, carnes ou peixes bem cozidos</strong> para não perder a força nos músculos.</li>'
+                    f'<li>🍎 <strong>Coma frutas</strong> (como mamão e maçã raspada) e aveia para ajudar o intestino.</li>'
+                    f'<li>🥣 Se tiver ruim de mastigar, <strong>amasse bem a comida</strong> ou faça em forma de purê e sopas.</li>'
+                    f'<li>🧄 <strong>Evite sal em excesso</strong>. Tempere com alho, cebola e temperos naturais.</li>'
+                    f'<li>☀️ <strong>Tome um pouco de sol</strong> de manhã cedo para ajudar os ossos.</li>'
+                    f'</ul>'
+                    f'<div style="margin-top: 15px; font-size: 0.9rem; color: #666;">Pontuação PRAR Final: {total_pontos}/{max_pontos}</div>'
+                    f'</div>'
+                )
                 st.markdown(laudo_html, unsafe_allow_html=True)
 
-                pdf_bytes = gerar_pdf_paciente(
+                pdf_bytes = gerar_pdf_idoso(
                     nome, idade, sexo, peso, altura, imc, classif_imc, tmb, get, formula_nome, risco, explicacao, respostas
                 )
 
@@ -250,17 +265,17 @@ with main_col_2:
                 st.download_button(
                     label="📄 Baixar Relatório PDF Profissional",
                     data=pdf_bytes,
-                    file_name=f"Mapa_Nutricional_{nome.replace(' ', '_')}.pdf",
+                    file_name=f"Mapa_Nutricional_Idoso_{nome.replace(' ', '_')}.pdf",
                     mime="application/pdf",
                 )
 
     with tab_cardapio:
         st.header("🍽️ Planejamento de Cardápio")
 
-        if "dados_paciente" not in st.session_state or st.session_state["dados_paciente"].get("is_gestante", True):
+        if "dados_paciente_idoso" not in st.session_state:
             st.info("⚠️ Realize a avaliação na aba 'Avaliação e PDF' para carregar os dados biométricos.")
         else:
-            dados = st.session_state["dados_paciente"]
+            dados = st.session_state["dados_paciente_idoso"]
 
             st.subheader(f"Plano Estratégico: {dados['nome']}")
             c1, c2, c3 = st.columns(3)
@@ -270,27 +285,29 @@ with main_col_2:
             
             get_base = float(dados["get"])
 
-            if "kcal_alvo" not in st.session_state:
-                st.session_state["kcal_alvo"] = get_base
+            if "kcal_alvo_idoso" not in st.session_state:
+                st.session_state["kcal_alvo_idoso"] = get_base
 
             with st.container():
                 st.markdown("### Configuração de Energia")
                 e_col1, e_col2 = st.columns([3, 1])
                 with e_col1:
-                    get_editavel = st.number_input("Definir Energia Alvo (kcal/dia)", min_value=800, max_value=5000, value=int(st.session_state["kcal_alvo"]), step=10)
+                    get_editavel = st.number_input("Definir Energia Alvo (kcal/dia)", min_value=800, max_value=5000, value=int(st.session_state["kcal_alvo_idoso"]), step=10, key="get_idoso")
+                    # Atualiza o session state se o usuário mudar o input
+                    st.session_state["kcal_alvo_idoso"] = get_editavel
                 with e_col2:
                     st.write(""); st.write("")
                     if st.button("Resetar p/ Valor Base"):
-                        st.session_state["kcal_alvo"] = get_base
+                        st.session_state["kcal_alvo_idoso"] = get_base
                         st.rerun()
 
-            get = st.session_state["kcal_alvo"]
+            get = st.session_state["kcal_alvo_idoso"]
 
             st.markdown("### Metas de Macronutrientes")
             col_m1, col_m2, col_m3 = st.columns(3)
-            with col_m1: perc_cho = st.slider("Carboidratos (%)", 30, 70, 50, 1)
-            with col_m2: perc_ptn = st.slider("Proteínas (%)", 10, 50, 20, 1)
-            with col_m3: perc_lip = st.slider("Lipídeos (%)", 10, 45, 30, 1)
+            with col_m1: perc_cho = st.slider("Carboidratos (%)", 30, 70, 50, 1, key="cho_id")
+            with col_m2: perc_ptn = st.slider("Proteínas (%)", 10, 50, 20, 1, key="ptn_id")
+            with col_m3: perc_lip = st.slider("Lipídeos (%)", 10, 45, 30, 1, key="lip_id")
 
             soma = perc_cho + perc_ptn + perc_lip
             if soma != 100:
@@ -301,29 +318,29 @@ with main_col_2:
             st.markdown("---")
             st.subheader("📝 Construção do Cardápio")
             
-            modo_cardapio = st.radio("Escolha o método de elaboração:", ["🤖 Gerador Inteligente (IA)", "✍️ Estruturação Manual"], horizontal=True)
+            modo_cardapio = st.radio("Escolha o método de elaboração:", ["🤖 Gerador Inteligente (IA)", "✍️ Estruturação Manual"], horizontal=True, key="modo_id")
 
             if modo_cardapio == "🤖 Gerador Inteligente (IA)":
-                habitos_input = st.text_area("Rotina e preferências do paciente:", placeholder="Ex: Paciente prefere café da manhã rápido...", height=120)
+                habitos_input = st.text_area("Rotina, mastigação e preferências do paciente idoso:", placeholder="Ex: Paciente usa prótese, prefere alimentos cozidos e macios...", height=120)
                 if st.button("✨ Gerar Cardápio Inteligente"):
                     if not habitos_input.strip(): st.warning("⚠️ Forneça detalhes sobre a rotina.")
                     else:
                         with st.spinner("Estruturando o cardápio ideal..."):
                             try:
                                 resultado = gerar_cardapio_ia(dados_paciente=dados, habitos_texto=habitos_input.strip())
-                                st.session_state["cardapio_ia"] = resultado
+                                st.session_state["cardapio_ia_idoso"] = resultado
                             except Exception as e:
                                 st.error(f"Erro na geração: {e}")
             else:
                 col_m1, col_m2 = st.columns(2)
                 with col_m1:
-                    cafe = st.text_area("☕ Café da Manhã", height=80)
-                    almoco = st.text_area("🍲 Almoço", height=80)
-                    jantar = st.text_area("🍽️ Jantar", height=80)
+                    cafe = st.text_area("☕ Café da Manhã", height=80, key="c_id")
+                    almoco = st.text_area("🍲 Almoço", height=80, key="a_id")
+                    jantar = st.text_area("🍽️ Jantar", height=80, key="j_id")
                 with col_m2:
-                    lanche_m = st.text_area("🥪 Lanche da Manhã", height=80)
-                    lanche_t = st.text_area("🍎 Lanche da Tarde", height=80)
-                    ceia = st.text_area("🌙 Ceia", height=80)
+                    lanche_m = st.text_area("🥪 Lanche da Manhã", height=80, key="lm_id")
+                    lanche_t = st.text_area("🍎 Lanche da Tarde", height=80, key="lt_id")
+                    ceia = st.text_area("🌙 Ceia", height=80, key="ce_id")
                     
                 if st.button("💾 Salvar Cardápio Manual"):
                     texto_manual = ""
@@ -335,14 +352,14 @@ with main_col_2:
                     if ceia.strip(): texto_manual += f"**Ceia**\n{ceia.strip()}\n\n"
                     
                     if texto_manual:
-                        st.session_state["cardapio_ia"] = texto_manual
+                        st.session_state["cardapio_ia_idoso"] = texto_manual
                         st.success("✅ Cardápio salvo!")
                     else: st.warning("⚠️ Preencha pelo menos uma refeição.")
 
-            if "cardapio_ia" in st.session_state and st.session_state["cardapio_ia"]:
+            if "cardapio_ia_idoso" in st.session_state and st.session_state["cardapio_ia_idoso"]:
                 st.markdown("### 📋 Cardápio Final")
-                st.markdown(f'<div class="laudo-box">{st.session_state["cardapio_ia"]}</div>', unsafe_allow_html=True)
+                st.markdown(f'<div class="laudo-box">{st.session_state["cardapio_ia_idoso"]}</div>', unsafe_allow_html=True)
                 if st.button("📄 Exportar Cardápio em PDF"):
                     from nutri_pdf import gerar_pdf_cardapio_ia
-                    pdf_bytes_card = gerar_pdf_cardapio_ia(dados_paciente=dados, texto_cardapio=st.session_state["cardapio_ia"])
+                    pdf_bytes_card = gerar_pdf_cardapio_ia(dados_paciente=dados, texto_cardapio=st.session_state["cardapio_ia_idoso"])
                     st.download_button(label="⬇️ Baixar PDF do Cardápio", data=pdf_bytes_card, file_name=f"Plano_Alimentar_{dados['nome'].replace(' ', '_')}.pdf", mime="application/pdf")

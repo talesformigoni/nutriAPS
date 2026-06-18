@@ -16,80 +16,40 @@ if "current_module" not in st.session_state or st.session_state["current_module"
     st.session_state.clear()
     st.session_state["current_module"] = "gestante"
 
-# INJEÇÃO DE CSS PADRONIZADO (TEMA CLARO + FLEXBOX FOOTER)
+# INJEÇÃO DE CSS
 st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
     html, body, [class*="st-"] { font-family: 'Inter', sans-serif !important; color: #1D361F !important; }
     
-    /* --- PROTEÇÃO ABSOLUTA DE ÍCONES --- */
-    .material-icons, 
-    .material-symbols-rounded, 
-    [data-testid*="Icon"], 
-    [data-testid*="Icon"] *, 
-    [data-testid="stSidebarCollapseButton"] *, 
-    [data-testid="collapsedControl"] *,
-    [class*="icon"] {
+    .material-icons, .material-symbols-rounded, [data-testid*="Icon"], [data-testid*="Icon"] *, [data-testid="stSidebarCollapseButton"] *, [data-testid="collapsedControl"] *, [class*="icon"] {
         font-family: "Material Symbols Rounded", "Material Icons" !important;
     }
     
     .main { background-color: #ECE5DF !important; padding: 2rem !important; }
     [data-testid="stAppViewContainer"] { background-color: #ECE5DF !important; }
 
-    /* ===================== SIDEBAR (TEMA CLARO & ELEGANTE) ===================== */
+    /* ===================== SIDEBAR ===================== */
     [data-testid="stSidebar"] {
-        background-color: #F7F9F7 !important; /* Fundo super claro */
-        border-right: 1px solid #E2EBE3 !important; /* Borda sutil */
+        background-color: #F7F9F7 !important; border-right: 1px solid #E2EBE3 !important;
         box-shadow: 2px 0 10px rgba(0,0,0,0.02);
     }
     [data-testid="stSidebarNav"] { display: none !important; }
-
-    .sidebar-logo {
-        padding: 2rem 1.4rem 1.4rem 1.4rem;
-        border-bottom: 1px solid #E2EBE3;
-        margin-bottom: 1.4rem;
-    }
-    .sidebar-logo .logo-title {
-        font-size: 1.3rem; font-weight: 700; color: #1D361F; letter-spacing: -0.02em;
-    }
-    .sidebar-logo .logo-sub {
-        font-size: 0.75rem; color: #5A7260; margin-top: 0.2rem;
-    }
-
-    .nav-group-label {
-        font-size: 0.65rem; font-weight: 700; letter-spacing: 0.10em;
-        text-transform: uppercase; color: #859B48;
-        padding: 0 1.4rem; margin-bottom: 0.4rem;
-    }
-
+    .sidebar-logo { padding: 0rem 1.4rem 1.4rem 1.4rem; border-bottom: 1px solid #E2EBE3; margin-bottom: 1.4rem; }
+    .sidebar-logo .logo-title { font-size: 1.3rem; font-weight: 700; color: #1D361F; letter-spacing: -0.02em; }
+    .sidebar-logo .logo-sub { font-size: 0.75rem; color: #5A7260; margin-top: 0.2rem; }
+    .nav-group-label { font-size: 0.65rem; font-weight: 700; letter-spacing: 0.10em; text-transform: uppercase; color: #859B48; padding: 0 1.4rem; margin-bottom: 0.4rem; }
+    
     [data-testid="stSidebar"] [data-testid="stPageLink"] { margin: 0 0.7rem 0.15rem 0.7rem !important; }
     [data-testid="stSidebar"] [data-testid="stPageLink"] a {
         display: flex !important; align-items: center !important; gap: 0.55rem !important;
         padding: 0.6rem 0.85rem !important; border-radius: 9px !important;
-        font-size: 0.88rem !important; font-weight: 600 !important;
-        color: #2D5A34 !important; text-decoration: none !important;
-        transition: background 0.15s ease, color 0.15s ease !important;
-        background: transparent !important;
+        font-size: 0.88rem !important; font-weight: 600 !important; color: #2D5A34 !important; text-decoration: none !important;
     }
-    [data-testid="stSidebar"] [data-testid="stPageLink"] a:hover {
-        background: #E8F0E9 !important; color: #1D361F !important;
-    }
+    [data-testid="stSidebar"] [data-testid="stPageLink"] a:hover { background: #E8F0E9 !important; color: #1D361F !important; }
 
-    /* --- FIX DEFINITIVO DO FOOTER DA SIDEBAR (MÁGICA DO FLEXBOX) --- */
-    [data-testid="stSidebarUserContent"] {
-        display: flex !important;
-        flex-direction: column !important;
-        min-height: 92vh !important; /* Força o contêiner a esticar verticalmente */
-    }
-    
-    .sidebar-footer {
-        margin-top: auto !important; /* Empurra o texto pro fundo */
-        text-align: center !important;
-        font-size: 0.68rem !important;
-        color: #8A9A8E !important;
-        line-height: 1.6 !important;
-        padding-bottom: 1rem !important;
-    }
+    [data-testid="stSidebarUserContent"] { padding-top: 1.5rem !important; display: flex !important; flex-direction: column !important; min-height: 92vh !important; }
+    .sidebar-footer { margin-top: auto !important; text-align: center !important; font-size: 0.68rem !important; color: #8A9A8E !important; line-height: 1.6 !important; padding-bottom: 1rem !important; }
 
     /* ===================== ESTILOS ESPECÍFICOS DA PÁGINA ===================== */
     h1, h2, h3 { color: #1D361F !important; font-weight: 700 !important; }
@@ -97,8 +57,9 @@ st.markdown("""
     h2 { font-size: 1.5rem !important; margin-top: 1rem !important; margin-bottom: 1.2rem !important; border-bottom: 2px solid #C4C7B6; padding-bottom: 10px; }
     .st-emotion-cache-12w0qpk, .st-emotion-cache-6q9sum, .st-emotion-cache-ocquxy { background-color: #DFC8B6 !important; border-radius: 16px !important; padding: 20px !important; border: 1px solid rgba(196, 199, 182, 0.5) !important; box-shadow: 0 4px 15px rgba(0,0,0,0.03) !important; }
     [data-testid="InputInstructions"] { display: none !important; }
-    .stTextInput input, .stNumberInput input, .stSelectbox [data-baseweb="select"] { background-color: #F7F3F0 !important; border: 1px solid #C4C7B6 !important; border-radius: 10px !important; height: 45px !important; }
-    .stTextInput input:focus, .stNumberInput input:focus { border-color: #859B48 !important; box-shadow: 0 0 0 3px rgba(133, 155, 72, 0.1) !important; }
+    .stTextInput input, .stNumberInput input, .stSelectbox [data-baseweb="select"], .stTextArea textarea { background-color: #F7F3F0 !important; border: 1px solid #C4C7B6 !important; border-radius: 10px !important; }
+    .stTextInput input, .stNumberInput input, .stSelectbox [data-baseweb="select"] { height: 45px !important; }
+    .stTextInput input:focus, .stNumberInput input:focus, .stTextArea textarea:focus { border-color: #859B48 !important; box-shadow: 0 0 0 3px rgba(133, 155, 72, 0.1) !important; }
     .stButton button { background-color: #859B48 !important; color: #FFFFFF !important; border: none !important; border-radius: 12px !important; padding: 0.6rem 1.5rem !important; font-weight: 600 !important; width: 100% !important; text-transform: uppercase; }
     .stButton button:hover { background-color: #1D361F !important; color: #FFFFFF !important; transform: translateY(-2px); }
     [data-testid="stMetric"] { background-color: #FFFFFF !important; border-radius: 12px !important; padding: 15px 20px !important; border: 1px solid #C4C7B6 !important; }
@@ -114,7 +75,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # ==========================================
-# SIDEBAR PADRONIZADA
+# SIDEBAR
 # ==========================================
 with st.sidebar:
     st.markdown("""
@@ -128,10 +89,33 @@ with st.sidebar:
     st.page_link("app.py",                         label="🏠  Início")
     st.page_link("pages/01_👥_Populacao_Geral.py", label="👥  População Geral")
     st.page_link("pages/02_🤰_Gestantes.py",       label="🤰  Gestantes")
+    st.page_link("pages/03_👴_Idosos.py",          label="👴  Idosos")
 
+    # --- CSS EXCLUSIVO E TÍTULO PARA O PRAR ---
+    st.markdown("""
+        <style>
+        /* Caça especificamente o link do PRAR e transforma numa "Box" */
+        a[href$="Protocolo_PRAR"] {
+            background-color: #F0F6F1 !important; /* Fundo verdinho bem claro */
+            border: 1px solid #C4C7B6 !important; /* Bordinha marcando o destaque */
+            box-shadow: 0 2px 5px rgba(0,0,0,0.03) !important;
+        }
+        a[href$="Protocolo_PRAR"]:hover {
+            background-color: #E8F0E9 !important;
+            border-color: #859B48 !important;
+        }
+        </style>
+        
+        <div class="nav-group-label" style="margin-top: 1.8rem;">Apoio Clínico</div>
+    """, unsafe_allow_html=True)
+
+    # O link do PRAR é renderizado aqui embaixo do novo título
+    st.page_link("pages/04_📚_Protocolo_PRAR.py",  label="📚  Protocolo PRAR")
+
+    # O Rodapé fica logo abaixo
     st.markdown("""
         <div class="sidebar-footer">
-            NutriAPS · v1.0<br>
+            NutriAPS · v2.0<br>
             Residência Multiprofissional<br>
             Atenção Básica - 2026
         </div>
