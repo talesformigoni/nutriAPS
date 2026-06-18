@@ -250,25 +250,25 @@ with main_col:
     st.markdown("""
     <div class="card-estudo" style="font-size: 0.85rem; line-height: 1.8; color: #1D361F;">
         <p style="margin-bottom: 12px; text-indent: -1.5rem; padding-left: 1.5rem;">
-            BRASIL. Ministério da Saúde. Secretaria de Atenção à Saúde. Departamento de Atenção Básica. <strong>Alimentação saudável para a pessoa idosa: um manual para profissionais de saúde</strong>. Brasília: Ministério da Saúde, 2009.
+            BRASIL. Ministério da Saúde. Secretaria de Atenção à Saúde. Departamento de Atenção Básica. Alimentação saudável para a pessoa idosa: um manual para profissionais de saúde. Brasília: Ministério da Saúde, 2009.
         </p>
         <p style="margin-bottom: 12px; text-indent: -1.5rem; padding-left: 1.5rem;">
-            BRASIL. Ministério da Saúde. Secretaria de Atenção Primária à Saúde. Departamento de Gestão do Cuidado Integral. <strong>Caderneta brasileira da gestante</strong>. Brasília: Ministério da Saúde, 2026.
+            BRASIL. Ministério da Saúde. Secretaria de Atenção Primária à Saúde. Departamento de Gestão do Cuidado Integral. Caderneta brasileira da gestante. Brasília: Ministério da Saúde, 2026.
         </p>
         <p style="margin-bottom: 12px; text-indent: -1.5rem; padding-left: 1.5rem;">
-            BRASIL. Ministério da Saúde. Secretaria de Atenção à Saúde. Departamento de Atenção Básica. <strong>Guia Alimentar para a População Brasileira</strong>. 2. ed. Brasília: Ministério da Saúde, 2014.
+            BRASIL. Ministério da Saúde. Secretaria de Atenção à Saúde. Departamento de Atenção Básica. Guia alimentar para a população brasileira. 2. ed. Brasília: Ministério da Saúde, 2014.
         </p>
         <p style="margin-bottom: 12px; text-indent: -1.5rem; padding-left: 1.5rem;">
-            BRASIL. Ministério da Saúde. Universidade Federal de Sergipe. <strong>Guia para a Organização da Vigilância Alimentar e Nutricional na Atenção Primária à Saúde</strong>. Brasília: Ministério da Saúde, 2022.
+            BRASIL. Ministério da Saúde; UNIVERSIDADE FEDERAL DE SERGIPE. Guia para a organização da vigilância alimentar e nutricional na atenção primária à saúde. Brasília: Ministério da Saúde, 2022.
         </p>
         <p style="margin-bottom: 0px; text-indent: -1.5rem; padding-left: 1.5rem;">
-            BRASIL. Ministério da Saúde. Secretaria de Atenção à Saúde. Departamento de Atenção Básica. <strong>Política Nacional de Alimentação e Nutrição</strong>. 1. ed., 1. reimpr. Brasília: Ministério da Saúde, 2013.
+            BRASIL. Ministério da Saúde. Secretaria de Atenção à Saúde. Departamento de Atenção Básica. Política Nacional de Alimentação e Nutrição. 1. ed. 1. reimpr. Brasília: Ministério da Saúde, 2013.
+        </p>
+        <p style="margin-bottom: 0px; text-indent: -1.5rem; padding-left: 1.5rem;">
+            KAC, G. et al. Gestational weight gain and adverse maternal outcomes in Brazil. American Journal of Clinical Nutrition, [S. l.], v. 113, n. 5, p. 1351–1360, 2021.
         </p>
         <p style="margin-bottom: 0px; text-indent: -1.5rem; padding-left: 1.5rem;">
             MONTEIRO, C. A. et al. Classificação NOVA: o sistema epidemiológico reconhecido internacionalmente. Desenvolvido pelo Núcleo de Pesquisas Epidemiológicas em Nutrição e Saúde (NUPENS/USP). Disponível em: https://nupens.fsp.usp.br/a-classificacao-nova/. Acesso em: 18 jun. 2026.
-        </p>
-        <p style="margin-bottom: 0px; text-indent: -1.5rem; padding-left: 1.5rem;">
-            Gilberto Kac e Thais RB Carrilho; et al. (Am J Clin Nutr 2021;113:1351–1360).
         </p>
     </div>
     """, unsafe_allow_html=True)
