@@ -76,6 +76,7 @@ with st.sidebar:
     st.page_link("pages/01_👥_Populacao_Geral.py", label="👥  População Geral")
     st.page_link("pages/02_🤰_Gestantes.py",       label="🤰  Gestantes")
     st.page_link("pages/03_👴_Idosos.py",          label="👴  Idosos")
+    st.page_link("pages/05_⚖️_Obesidade.py",          label="⚖️  Linha de Obesidade")
 
     st.markdown("""
         <style>
@@ -96,7 +97,7 @@ with st.sidebar:
 
     st.markdown("""
         <div class="sidebar-footer">
-            NutriAPS · v1.0<br>
+            NutriAPS · v2.0<br>
             Residência Multiprofissional<br>
             Atenção Básica - 2026
         </div>
@@ -112,8 +113,42 @@ with main_col:
     st.markdown("<p style='color:#5A7260; font-size:1.1rem; margin-top:-0.5rem;'>Análise dos critérios clínicos, escolhas de design e automação de protocolos no ecossistema NutriAPS.</p>", unsafe_allow_html=True)
     st.markdown("---")
 
-    # --- SEÇÃO 1 ---
-    st.header("1. Racional da Interface e Linguagem Acessível")
+# --- SEÇÃO 1 - APRESENTAÇÃO E MEMORIAL ---
+    st.header("1. Apresentação e Memorial Institucional")
+    st.markdown("<p style='font-size:0.95rem; margin-top:-0.5rem; color:#5A7260;'>Histórico de desenvolvimento e propósito técnico-científico da plataforma:</p>", unsafe_allow_html=True)
+
+    st.markdown("""
+    <div class="card-estudo">
+    <h4>1.1 Origem e Desenvolvimento do Ecossistema</h4>
+    <p>O <strong>NutriAPS</strong> é uma plataforma tecnológica de suporte à decisão clínica (CDSS) idealizada e desenvolvida pelo nutricionista e residente <strong>Benedito Tales Santos Sousa Formigoni</strong>, no ano de 2026. A concepção, estruturação e arquitetura de dados do sistema consolidaram-se como produto técnico durante o período de sua atuação na <strong>Residência Multiprofissional em Atenção Básica / Saúde da Família</strong>, no município de <strong>Buritis - Rondônia (RO)</strong>.</p>
+    <p>Desenvolvido de forma independente e com caráter estritamente benemérito, o sistema foi gentilmente cedido para uso dos profissionais de nutrição e equipes de Saúde da Família atuantes na Atenção Primária à Saúde (APS) do estado de Rondônia, permanecendo como uma ferramenta de utilidade pública com acesso totalmente gratuito, livre e desprovido de fins comerciais.</p>
+    </div>
+    
+    <div class="card-estudo">
+    <h4>1.2 Propósito Assistencial e Governança Clínica</h4>
+    <p>O ecossistema foi projetado com o objetivo estratégico de mitigar os gargalos operacionais do cotidiano assistencial do Sistema Único de Saúde (SUS), otimizando o tempo físico de consulta na unidade sem prejuízo ao rigor metodológico. A ferramenta atua como um guia dinâmico orientador, auxiliando o profissional na condução dietoterápica e na tomada de decisões clínicas seguras, observando e integrando de forma estrita os regulamentos e protocolos vigentes, tais como:</p>
+    <ul style="line-height: 1.6; margin-left: 20px;">
+        <li>As diretrizes de triagem epidemiológica da Classificação NOVA e do <strong>Guia Alimentar para a População Brasileira (2014)</strong> do Ministério da Saúde.</li>
+        <li>Os parâmetros de diagnóstico antropométrico e pontos de corte oficiais estabelecidos pelo <strong>Sistema de Vigilância Alimentar e Nutricional (SISVAN / VAN)</strong>.</li>
+        <li>Os fluxos de triagem e arranjos assistenciais preconizados pela recente <strong>Linha de Cuidado do Sobrepeso e da Obesidade do Estado de Rondônia (2024)</strong>.</li>
+    </ul>
+    <p style="margin-top: 15px;">Ao transpor as evidências dos manuais técnicos para um ecossistema digital interativo, o NutriAPS qualifica o registro de dados na Atenção Básica, promove a padronização das condutas baseadas em evidências e fortalece a atuação do nutricionista como agente estratégico na prevenção de agravos metabólicos crônicos na população rondoniense.</p>
+    </div>
+                
+    <div class="card-estudo">
+    <h4>1.3 Arquitetura de Software e Stack Tecnológico</h4>
+    <p>Para os profissionais de Tecnologia da Informação (TI) e Informática em Saúde que auditam ou interagem com o NutriAPS, o sistema foi construído sob uma arquitetura ágil, responsiva e de fácil manutenção, utilizando o seguinte ecossistema tecnológico:</p>
+    <ul style="line-height: 1.6; margin-left: 20px;">
+        <li><strong>Linguagem Core (Python):</strong> Toda a inteligência matemática, regras de negócio, cruzamento de dados de comorbidades e os algoritmos do Suporte à Decisão Clínica (CDSS) foram desenvolvidos em Python. A escolha garante precisão absoluta no processamento das equações e viabiliza futuras integrações com bancos de dados relacionais e prontuários eletrônicos.</li>
+        <li><strong>Framework Web (Streamlit):</strong> A interface gráfica (front-end) foi inteiramente orquestrada via Streamlit. Isso permite que a aplicação rode como uma interface fluida e reativa, adaptando-se perfeitamente aos monitores das Unidades Básicas de Saúde ou dispositivos móveis, processando gatilhos e alertas visuais em tempo real.</li>
+        <li><strong>Ambiente de Desenvolvimento:</strong> A engenharia de software, codificação, componentização visual e depuração do código-fonte foram realizadas integralmente no ambiente do Visual Studio Code (VS Code).</li>
+        <li><strong>Segurança e Estado de Sessão:</strong> A aplicação emprega a gestão de estados (<code>session_state</code>) para garantir o isolamento da memória. Isso assegura que os dados de triagem de um paciente não sofram vazamento ou sobreposição ao alternar entre as abas e módulos clínicos (Geral, Gestantes, Idosos e Obesidade), preservando a confiabilidade do atendimento no SUS.</li>
+    </ul>
+    </div>
+        """, unsafe_allow_html=True)
+
+    # --- SEÇÃO 2 ---
+    st.header("2. Racional da Interface e Linguagem Acessível")
     col_a, col_b = st.columns(2)
     
     with col_a:
@@ -132,38 +167,38 @@ with main_col:
         </div>
         """, unsafe_allow_html=True)
 
-    # --- SEÇÃO 2 ---
-    st.header("2. Arquitetura de Seleção Automática de Fórmulas")
-    st.markdown("<p style='font-size:0.95rem; margin-top:-0.5rem; color:#5A7260;'>A inteligência de cálculo do sistema chaveia os algoritmos automaticamente baseando-se no ciclo de vida e estado nutricional avaliado no momento:</p>", unsafe_allow_html=True)
+# --- SEÇÃO 3 ---
+    st.header("3. Arquitetura de Seleção Automática de Diretrizes")
+    st.markdown("<p style='font-size:0.95rem; margin-top:-0.5rem; color:#5A7260;'>A inteligência do sistema chaveia os algoritmos e protocolos automaticamente baseando-se no ciclo de vida e estado nutricional avaliado no momento:</p>", unsafe_allow_html=True)
     
-    col_c, col_d, col_e = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     
-    with col_c:
+    with col1:
         st.markdown("""
         <div class="card-estudo" style="height: 100%;">
             <h4>População Geral (Adultos)</h4>
             <p>O algoritmo executa uma triagem baseada no IMC para o cálculo da Taxa Metabólica Basal (TMB):</p>
             <ul style="font-size:0.85rem; padding-left:15px; margin-top:-5px;">
                 <li><strong>IMC &lt; 25 kg/m²:</strong> Aplica a equação de <em>Harris-Benedict revisada (1984)</em>, eficaz na preservação ponderal de indivíduos eutróficos ou em déficit.</li>
-                <li><strong>IMC ≥ 25 kg/m²:</strong> Chaveia automaticamente para <em>Mifflin-St Jeor</em>, clinicamente validada como mais precisa para populações com sobrepeso e obesidade, evitando superestimar as metas calóricas.</li>
+                <li><strong>IMC ≥ 25 kg/m²:</strong> Chaveia automaticamente para <em>Mifflin-St Jeor</em>, clinicamente validada como mais precisa para populações com excesso de peso, evitando superestimar as metas calóricas.</li>
             </ul>
         </div>
         """, unsafe_allow_html=True)
 
-    with col_d:
+    with col2:
         st.markdown("""
         <div class="card-estudo" style="height: 100%;">
             <h4>Acompanhamento Obstétrico</h4>
             <p>O módulo de gestantes processa o IMC de forma dinâmica cruzando as semanas de gestação com a <strong>Curva de Atalah (1997)</strong>.</p>
-            <p>O cálculo de ganho de peso e as recomendações de intervenção seguem de forma estrita o padrão técnico institucionalizado pela <strong>Caderneta Brasileira da Gestante (Versão MS 2026)</strong>, protegendo a díade contra desfechos adversos como Diabetes Melito Gestacional (DMG) e Síndrome Hipertensiva.</p>
+            <p>O cálculo de ganho de peso e as recomendações seguem de forma estrita o padrão técnico institucionalizado pela <strong>Caderneta Brasileira da Gestante (Versão MS 2026)</strong>, protegendo a díade contra desfechos adversos como DMG e Síndromes Hipertensivas.</p>
         </div>
         """, unsafe_allow_html=True)
 
-    with col_e:
+    with col3:
         st.markdown("""
         <div class="card-estudo" style="height: 100%;">
-            <h4>Avaliação Geriatria</h4>
-            <p>A classificação do IMC na pessoa idosa ignora os limites rígidos do adulto jovem e adota os pontos de corte da <strong>Vigilância Alimentar e Nutricional (VAN/Ministério da Saúde)</strong>:</p>
+            <h4>Avaliação Geriátrica</h4>
+            <p>A classificação do IMC na pessoa idosa ignora os limites rígidos do adulto jovem e adota os pontos de corte da <strong>Vigilância Alimentar e Nutricional (VAN/MS)</strong>:</p>
             <ul style="font-size:0.85rem; padding-left:15px; margin-top:-5px;">
                 <li><strong>IMC ≤ 22 kg/m²:</strong> Baixo Peso</li>
                 <li><strong>IMC 22 a 27 kg/m²:</strong> Eutrofia</li>
@@ -173,20 +208,32 @@ with main_col:
         </div>
         """, unsafe_allow_html=True)
 
-# --- SEÇÃO 3 ---
-    st.header("3. O Protocolo PRAR — Fundamentação e Estrutura Clínica")
+    with col4: # <-- NOVO CARD DA INTELIGÊNCIA DE OBESIDADE
+        st.markdown("""
+        <div class="card-estudo" style="height: 100%;">
+            <h4>Linha de Obesidade (CDSS)</h4>
+            <p>O sistema ativa um Sistema de Suporte à Decisão Clínica cruzando dados antropométricos, patológicos e comportamentais:</p>
+            <ul style="font-size:0.85rem; padding-left:15px; margin-top:-5px;">
+                <li><strong>Estratificação MACC:</strong> Classifica o nível de complexidade com base no protocolo do Estado de Rondônia, gerando alertas de segurança para regulação de cirurgia bariátrica.</li>
+                <li><strong>Modelo Transteórico:</strong> Intercepta o estágio de prontidão psicológica do paciente para adaptar automaticamente a linguagem do laudo e a rigidez das metas.</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
+
+# --- SEÇÃO 4 ---
+    st.header("4. O Protocolo PRAR — Fundamentação e Estrutura Clínica")
     st.markdown("<p style='font-size:0.95rem; margin-top:-0.5rem; color:#5A7260;'>Memorial descritivo dos pilares metodológicos aplicados no desenvolvimento do score de rastreamento:</p>", unsafe_allow_html=True)
 
     st.markdown("""
 <div class="card-estudo">
-    <h4>3.1 Justificativa de Desenvolvimento no Cenário da APS</h4>
+    <h4>4.1 Justificativa de Desenvolvimento no Cenário da APS</h4>
     <p>O ambiente de consultas na Atenção Primária à Saúde (APS) exige ferramentas de triagem diagnóstica que conciliem alta sensibilidade com viabilidade operacional. Ferramentas tradicionais de anamnese dietética, como o Recordatório de 24 horas ou o Questionário de Frequência Alimentar (QFA) extenso, demandam tempo clínico escasso e dependem excessivamente da memória de longo prazo do paciente. O <strong>PRAR (Pontuação de Risco Alimentar Rápida)</strong> soluciona esse gargalo operacional ao sintetizar indicadores críticos de consumo em um screening de 10 perguntas objetivas, permitindo uma estratificação de risco imediata à beira do leito ou no consultório.</p>
 </div>
 """, unsafe_allow_html=True)
 
     st.markdown("""
 <div class="card-estudo">
-    <h4>3.2 O Paradigma da Classificação NOVA</h4>
+    <h4>4.2 O Paradigma da Classificação NOVA</h4>
     <p>O referencial teórico do PRAR rompe com o modelo clássico focado estritamente na contagem isolada de calorias e macronutrientes, adotando a <strong>Classificação NOVA</strong> — o sistema epidemiológico reconhecido internacionalmente e desenvolvido pelo Núcleo de Pesquisas Epidemiológicas em Nutrição e Saúde (NUPENS/USP), que embasa o Guia Alimentar para a População Brasileira (2014).</p>
     <p>A Classificação NOVA categoriza os alimentos não pela sua composição biológica, mas pela <strong>extensão e propósito do processamento industrial</strong> a que são submetidos antes de chegarem à mesa, dividindo-os em quatro grupos fundamentais:</p>
     <ul style="line-height: 1.6; margin-bottom: 15px; margin-left: 20px;">
@@ -205,7 +252,7 @@ with main_col:
 
     st.markdown("""
 <div class="card-estudo">
-    <h4>3.3 Integração de Dimensões Comportamentais e Comensalidade</h4>
+    <h4>4.3 Integração de Dimensões Comportamentais e Comensalidade</h4>
     <p>Inovando em relação aos rastreios convencionais, o PRAR operacionaliza as recomendações do Capítulo 4 do Guia Alimentar, consolidando a premissa de que <em>o modo de comer e os aspectos sociais do consumo são indissociáveis da saúde metabólica</em>. O sistema pontua desvios em dois eixos comportamentais:</p>
     <ul style="line-height: 1.6; margin-left: 20px;">
         <li><strong>Regularidade Cronobiológica:</strong> A desorganização dos horários e a substituição sistemática de refeições estruturadas por beliscos ou lanches rápidos desregulam os eixos hormonais da fome/saciedade (grelina e leptina), induzindo ao balanço energético positivo compensatório.</li>
@@ -216,7 +263,7 @@ with main_col:
 
     st.markdown("""
 <div class="card-estudo">
-    <h4>3.4 Lógica de Pontuação Crescente e Termômetro Metabólico</h4>
+    <h4>4.4 Lógica de Pontuação Crescente e Termômetro Metabólico</h4>
     <p>A arquitetura matemática do PRAR adota uma escala linear crescente (0 a 3 pontos por resposta). Ao contrário de índices que pontuam virtudes dietéticas, o PRAR intencionalmente atribui os maiores pesos numéricos às condutas de maior agravo à saúde. Essa engenharia de dados gera um score centralizado (0 a 30 pontos) que atua como um verdadeiro termômetro de risco para Doenças Crônicas Não Transmissíveis (DANTs). Pontuações progressivamente mais altas mapeiam um gradiente de suscetibilidade individual para o desenvolvimento de obesidade, hipertensão arterial sistêmica e resistência à insulina.</p>
 </div>
 """, unsafe_allow_html=True)
@@ -242,7 +289,34 @@ with main_col:
     </div>
     """, unsafe_allow_html=True)
 
-    # --- SEÇÃO 4 ---
+# --- SEÇÃO 5 — LINHA DE CUIDADO DA OBESIDADE (CDSS) ---
+    st.header("5. Incorporação da Linha de Cuidado da Obesidade e Modelos Avançados")
+    st.markdown("<p style='font-size:0.95rem; margin-top:-0.5rem; color:#5A7260;'>Análise metodológica do cruzamento de dados antropométricos, comorbidades estaduais e psicologia comportamental:</p>", unsafe_allow_html=True)
+
+    st.markdown("""
+<div class="card-estudo">
+    <h4>5.1 Estratificação pelo Modelo de Atenção às Condições Crônicas (MACC)</h4>
+    <p>O ecossistema NutriAPS incorpora as diretrizes operacionais da <strong>Linha de Cuidado do Sobrepeso e da Obesidade do Estado de Rondônia (2024)</strong>, estruturada a partir do Modelo de Atenção às Condições Crônicas (MACC). O algoritmo de suporte à decisão clínica (CDSS) realiza o cruzamento automatizado do Índice de Massa Corporal (IMC) com o mapeamento de comorbidades crônicas e sistêmicas (HAS, DM, apneia obstrutiva do sono, doenças cardiovasculares e osteoartropatias por carga). Essa engenharia distribui o paciente em níveis de complexidade assistencial assistidos por um semáforo visual:</p>
+    <ul>
+        <li><strong>Níveis 1 e 2 (Baixo Risco):</strong> Manejo e acompanhamento longitudinal focados estritamente no âmbito da Atenção Primária, centralizados na mudança de estilo de vida e monitoramento via PRAR.</li>
+        <li><strong>Nível 3 (Risco Moderado):</strong> Ativação de protocolo de Cuidado Compartilhado obrigatório na APS, exigindo co-manejo entre nutricionista e corpo médico para controle laboratorial de risco metabólico.</li>
+        <li><strong>Nível 4 (Alto Risco):</strong> Critério de elegibilidade para encaminhamento a serviços de Alta Complexidade e avaliação de Cirurgia Bariátrica. O sistema atua como barreira de segurança ao disparar o alerta de auditoria clínica, relembrando a obrigatoriedade regulatória de <strong>no mínimo 2 anos de tratamento clínico prévio documentado e sem sucesso na APS</strong>, conforme preconizado pelo Ministério da Saúde e pelas normativas do Estado.</li>
+    </ul>
+</div>
+""", unsafe_allow_html=True)
+
+    st.markdown("""
+<div class="card-estudo">
+    <h4>5.2 Interface Psicológica e Modelo Transteórico de Mudança</h4>
+    <p>Reconhecendo que o manejo da obesidade perpassa a complexidade psicossocial do indivíduo, o sistema operacionaliza o <strong>Modelo Transteórico de Prochaska e DiClemente</strong>. O CDSS intercepta a classificação antropométrica e submete a conduta médica à fase comportamental identificada no momento da consulta:</p>
+    <ul>
+        <li><strong>Fases Passivas (Pré-contemplação e Contemplação):</strong> O sistema gera alertas restritivos ao profissional, contraindicando planos alimentares rígidos ou metas calóricas severas, cuja probabilidade de abandono terapêutico beira a totalidade. O laudo é programado para adotar uma abordagem de redução de danos, focando em aconselhamento motivacional e metas comportamentais mínimas.</li>
+        <li><strong>Fases Ativas (Preparação e Ação):</strong> O aplicativo abre a janela de oportunidade clínica, liberando a aplicação integral do protocolo dietoterápico estruturado, estabelecimento de metas dinâmicas e engajamento ativo em intervenções de estilo de vida.</li>
+    </ul>
+</div>
+""", unsafe_allow_html=True)
+
+    # --- REFERÊNCIAS ---
     st.markdown("<br>", unsafe_allow_html=True)
     st.header("📚 Referências Bibliográficas")
     st.markdown("<p style='color:#5A7260; font-size:0.95rem; margin-top:-0.5rem;'>Base regulatória, técnica e literária que sustenta as diretrizes do NutriAPS:</p>", unsafe_allow_html=True)
@@ -261,14 +335,17 @@ with main_col:
         <p style="margin-bottom: 12px; text-indent: -1.5rem; padding-left: 1.5rem;">
             BRASIL. Ministério da Saúde; UNIVERSIDADE FEDERAL DE SERGIPE. Guia para a organização da vigilância alimentar e nutricional na atenção primária à saúde. Brasília: Ministério da Saúde, 2022.
         </p>
-        <p style="margin-bottom: 0px; text-indent: -1.5rem; padding-left: 1.5rem;">
+        <p style="margin-bottom: 12px; text-indent: -1.5rem; padding-left: 1.5rem;">
             BRASIL. Ministério da Saúde. Secretaria de Atenção à Saúde. Departamento de Atenção Básica. Política Nacional de Alimentação e Nutrição. 1. ed. 1. reimpr. Brasília: Ministério da Saúde, 2013.
         </p>
-        <p style="margin-bottom: 0px; text-indent: -1.5rem; padding-left: 1.5rem;">
+        <p style="margin-bottom: 12px; text-indent: -1.5rem; padding-left: 1.5rem;">
             KAC, G. et al. Gestational weight gain and adverse maternal outcomes in Brazil. American Journal of Clinical Nutrition, [S. l.], v. 113, n. 5, p. 1351–1360, 2021.
         </p>
-        <p style="margin-bottom: 0px; text-indent: -1.5rem; padding-left: 1.5rem;">
+        <p style="margin-bottom: 12px; text-indent: -1.5rem; padding-left: 1.5rem;">
             MONTEIRO, C. A. et al. Classificação NOVA: o sistema epidemiológico reconhecido internacionalmente. Desenvolvido pelo Núcleo de Pesquisas Epidemiológicas em Nutrição e Saúde (NUPENS/USP). Disponível em: https://nupens.fsp.usp.br/a-classificacao-nova/. Acesso em: 18 jun. 2026.
+        </p>
+        <p style="margin-bottom: 12px; text-indent: -1.5rem; padding-left: 1.5rem;">
+            RONDÔNIA. Secretaria de Estado da Saúde. Subdiretoria Técnica em Saúde. Coordenadoria de Doenças e Condições Crônicas. Núcleo de Sobrepeso e Obesidade. Linha de Cuidado à Pessoa com Sobrepeso e Obesidade no Estado de Rondônia. Porto Velho: SESAU-RO, 2024.
         </p>
     </div>
     """, unsafe_allow_html=True)

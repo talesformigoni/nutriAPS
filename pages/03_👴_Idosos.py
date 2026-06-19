@@ -90,6 +90,7 @@ with st.sidebar:
     st.page_link("pages/01_👥_Populacao_Geral.py", label="👥  População Geral")
     st.page_link("pages/02_🤰_Gestantes.py",       label="🤰  Gestantes")
     st.page_link("pages/03_👴_Idosos.py",          label="👴  Idosos")
+    st.page_link("pages/05_⚖️_Obesidade.py",          label="⚖️  Linha de Obesidade")
 
     # --- CSS EXCLUSIVO E TÍTULO PARA O PRAR ---
     st.markdown("""

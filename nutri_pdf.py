@@ -1423,3 +1423,270 @@ def gerar_pdf_idoso(nome, idade, sexo, peso, altura, imc, classif_imc,
     
     c.save()
     return buf.getvalue()
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PDF ESPECÍFICO DE OBESIDADE (Layout Premium + Escala de Cinza / Impressão)
+# ═══════════════════════════════════════════════════════════════════════════
+def gerar_pdf_obesidade(nome, peso, altura, imc, classif, nivel_macc, fase_mudanca,
+                        pontos_prar, risco_prar, texto_paciente, dicas_lista, respostas_hab):
+    import datetime
+    import textwrap
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib import colors
+    from reportlab.platypus import Table, TableStyle, Paragraph
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.enums import TA_JUSTIFY
+    from reportlab.lib.units import mm
+    from io import BytesIO
+
+    # PALETA ESTRITA EM ESCALA DE CINZA (Economia de Tinta na APS)
+    PRETO_FORTE = colors.HexColor("#000000")
+    CINZA_ESCURO = colors.HexColor("#333333")
+    CINZA_MEDIO = colors.HexColor("#666666")
+    CINZA_TEXTO = colors.HexColor("#444444")
+    CINZA_ALT = colors.HexColor("#F5F5F5")
+    CINZA_BORDA = colors.HexColor("#CCCCCC")
+    CINZA_FUNDO = colors.HexColor("#EEEEEE")
+    BRANCO = colors.white
+
+    # Gradiente de Risco Monocromático (Baixo = Cinza Claro, Alto = Preto)
+    def _cor_r(risco):
+        if risco.lower() == "baixo": return colors.HexColor("#888888")
+        elif risco.lower() == "moderado": return CINZA_MEDIO
+        else: return PRETO_FORTE
+
+    meses = ["", "janeiro", "fevereiro", "março", "abril", "maio", "junho", 
+             "julho", "agosto", "setembro", "outubro", "novembro", "dezembro"]
+    hoje = datetime.datetime.now()
+    data_formatada = f"Gerado em {hoje.day:02d} de {meses[hoje.month]} de {hoje.year}"
+
+    buf = BytesIO()
+    c = canvas.Canvas(buf, pagesize=A4)
+    W, H = A4
+
+    # ─── PÁGINA 1 — Capa + Identificação ─────────────────────────────────
+    # Hero cinza escuro no topo
+    c.setFillColor(CINZA_ESCURO)
+    c.rect(0, H - 75*mm, W, 75*mm, fill=1, stroke=0)
+
+    # Faixa cinza médio como detalhe
+    c.setFillColor(CINZA_MEDIO)
+    c.rect(0, H - 78*mm, W, 4*mm, fill=1, stroke=0)
+
+    # Título principal
+    c.setFillColor(BRANCO)
+    c.setFont("Helvetica-Bold", 22)
+    c.drawString(15*mm, H - 30*mm, "Plano de Cuidado e Acompanhamento")
+
+    c.setFont("Helvetica", 11)
+    c.setFillColor(colors.HexColor("#DDDDDD"))
+    c.drawString(15*mm, H - 40*mm, "Prefeitura de Buritis-RO | Secretaria Municipal de Saúde")
+    c.drawString(15*mm, H - 45*mm, "Atenção Primária à Saúde | Linha de Cuidado da Obesidade")
+
+    # Nome do paciente em destaque
+    c.setFillColor(BRANCO)
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(15*mm, H - 55*mm, _limpar(nome).upper() if nome else "PACIENTE")
+    c.setFont("Helvetica", 10)
+    c.setFillColor(colors.HexColor("#CCCCCC"))
+    c.drawString(15*mm, H - 63*mm, data_formatada)
+
+    # Cards de métricas no hero
+    larg_card = 50*mm
+    _tag_metrica(c, 15*mm,   H - 99*mm, larg_card, "Peso Atual", f"{peso:.1f} kg")
+    _tag_metrica(c, 70*mm,   H - 99*mm, larg_card, "Estatura", f"{altura} cm")
+    
+    # Degrade cinza pro IMC
+    cor_imc = _cor_r("baixo" if imc < 25 else "moderado" if imc < 30 else "alto")
+    _tag_metrica(c, 125*mm,  H - 99*mm, larg_card, "IMC", f"{imc:.1f}", cor=cor_imc)
+    
+    # Classificação IMC badge
+    _card(c, 125*mm, H - 108*mm, larg_card, 7*mm, cor_fundo=cor_imc)
+    c.setFillColor(BRANCO)
+    c.setFont("Helvetica-Bold", 8)
+    c.drawCentredString(125*mm + larg_card/2, H - 105*mm, _limpar(classif))
+
+    # ── Seção Identificação e Clínica ──
+    y = H - 118*mm
+    y = _titulo_secao(c, y, "1. IDENTIFICAÇÃO E ESTRATIFICAÇÃO CLÍNICA", cor=CINZA_ESCURO)
+    y = _linha_info(c, y, "Nome:", nome if nome else "Não informado", fundo=True)
+    y = _linha_info(c, y, "Data da Consulta:", hoje.strftime("%d/%m/%Y"), fundo=False)
+    y = _linha_info(c, y, "Estratificação (MACC):", _limpar(nivel_macc.split(' (')[0]), fundo=True)
+    y = _linha_info(c, y, "Fase de Prontidão:", _limpar(fase_mudanca.split(' (')[0]), fundo=False)
+    y -= 8*mm
+
+    # ── Seção Nosso Combinado ──
+    y = _titulo_secao(c, y, "2. Nosso Combinado (Orientações para Casa)", cor=CINZA_MEDIO)
+    y -= 2*mm
+    
+    estilo_texto = ParagraphStyle('Texto', fontName='Helvetica', fontSize=10, textColor=CINZA_TEXTO, leading=14)
+    p = Paragraph(_limpar(texto_paciente), estilo_texto)
+    w_p, h_p = p.wrap(175*mm, 80*mm)
+    y -= h_p
+    p.drawOn(c, 18*mm, y)
+    y -= 8*mm
+
+    c.setFont("Helvetica-Bold", 10)
+    c.setFillColor(PRETO_FORTE)
+    c.drawString(18*mm, y, "Dicas simples para o seu dia a dia:")
+    y -= 6*mm
+
+    for dica in dicas_lista:
+        p_dica = Paragraph(f"• {_limpar(dica)}", estilo_texto)
+        w_d, h_d = p_dica.wrap(170*mm, 40*mm)
+        y -= h_d
+        p_dica.drawOn(c, 20*mm, y)
+        y -= 4*mm
+
+    _rodape_pagina(c, nome, 1)
+    c.showPage()
+
+    # ─── PÁGINA 2 — Avaliação de Hábitos (PRAR) ─────────────────────────
+    _cabecalho_pagina(c, "Avaliação de Hábitos")
+    cor_r = _cor_r(risco_prar)
+
+    y = H - 32*mm
+    y = _titulo_secao(c, y, "3. Avaliação de Risco Alimentar (PRAR)", cor=cor_r)
+
+    # Badge de risco
+    y -= 2*mm
+    _card(c, 15*mm, y - 4*mm, W - 30*mm, 12*mm, cor_fundo=cor_r)
+    c.setFillColor(BRANCO)
+    c.setFont("Helvetica-Bold", 11)
+    c.drawCentredString(W/2, y + 2*mm, f"Pontuação PRAR: {pontos_prar}/30  |  Risco Geral: {risco_prar.upper()}")
+    y -= 18*mm
+
+    # Tabela de respostas do PRAR
+    for i, (pergunta, resposta) in enumerate(respostas_hab):
+        if resposta is None:
+            continue
+        resp_limpa = str(resposta).split(" (")[0]
+        fundo = CINZA_ALT if i % 2 == 0 else BRANCO
+        _card(c, 15*mm, y - 2*mm, W - 30*mm, 7.5*mm, cor_fundo=fundo, cor_borda=CINZA_BORDA)
+
+        c.setFont("Helvetica-Bold", 8)
+        c.setFillColor(PRETO_FORTE)
+        perg_curta = _limpar(pergunta)[:60]
+        c.drawString(18*mm, y + 1*mm, perg_curta)
+
+        c.setFont("Helvetica", 8)
+        c.setFillColor(CINZA_TEXTO)
+        c.drawRightString(W - 18*mm, y + 1*mm, _limpar(resp_limpa))
+        y -= 8*mm
+
+    _rodape_pagina(c, nome, 2)
+    c.showPage()
+
+    # ─── PÁGINA 3 — Tabela de Alimentos ─────────────────────────────────
+    _cabecalho_pagina(c, "Exemplos de Alimentos")
+    y = H - 32*mm
+    y = _titulo_secao(c, y, "4. Exemplos de Alimentos e Porções", cor=CINZA_ESCURO)
+
+    y -= 2*mm
+    c.setFont("Helvetica", 8)
+    c.setFillColor(CINZA_TEXTO)
+    c.drawString(15*mm, y,
+        "Valores médios baseados na TACO. Servem para educação nutricional, "
+        "não substituem orientação individual.")
+    y -= 8*mm
+
+    alimentos = [
+        ["Alimento", "Medida caseira", "kcal", "Grupo"],
+        ["Arroz branco cozido",          "1 concha média (100 g)",    "130", "Base"],
+        ["Feijão carioca cozido",        "1 concha média (100 g)",    "80",  "Base"],
+        ["Macarrão cozido",              "1 escumadeira (100 g)",     "140", "Base"],
+        ["Pão francês",                  "1 unidade média (50 g)",    "135", "Base"],
+        ["Batata doce cozida",           "1 pedaço médio (60 g)",     "50",  "Base"],
+        ["Frango cozido/assado s/ pele", "1 filé pequeno (60 g)",     "100", "Proteína"],
+        ["Ovo de galinha inteiro",       "1 unidade média (50 g)",    "75",  "Proteína"],
+        ["Carne bovina magra cozida",    "1 bife pequeno (60 g)",     "130", "Proteína"],
+        ["Leite integral",               "1 copo (200 ml)",           "120", "Lácteo"],
+        ["Iogurte natural integral",     "1 pote (170 g)",            "110", "Lácteo"],
+        ["Queijo muçarela",              "1 fatia média (30 g)",      "90",  "Lácteo"],
+        ["Banana prata",                 "1 unidade média (80 g)",    "70",  "Fruta"],
+        ["Maçã",                         "1 unidade média (90 g)",    "50",  "Fruta"],
+        ["Laranja-pera",                 "1 unidade média (130 g)",   "60",  "Fruta"],
+        ["Óleo vegetal (soja)",          "1 col. sopa (8 g)",         "70",  "Gordura"],
+        ["Refrigerante comum",           "1 copo (200 ml)",           "80",  "Açúcar"],
+        ["Biscoito recheado",            "3 unidades (30 g)",         "145", "Açúcar"],
+        ["Bolo simples caseiro",         "1 fatia média (60 g)",      "180", "Açúcar"],
+    ]
+
+    col_w = [65*mm, 65*mm, 20*mm, 25*mm]
+    style = TableStyle([
+        ("BACKGROUND",   (0,0), (-1,0),  CINZA_ESCURO),
+        ("TEXTCOLOR",    (0,0), (-1,0),  BRANCO),
+        ("FONTNAME",     (0,0), (-1,0),  "Helvetica-Bold"),
+        ("FONTSIZE",     (0,0), (-1,0),  8),
+        ("ALIGN",        (2,0), (2,-1),  "CENTER"),
+        ("ALIGN",        (3,0), (3,-1),  "CENTER"),
+        ("FONTNAME",     (0,1), (-1,-1), "Helvetica"),
+        ("FONTSIZE",     (0,1), (-1,-1), 8),
+        ("ROWBACKGROUNDS", (0,1), (-1,-1), [BRANCO, CINZA_ALT]),
+        ("GRID",         (0,0), (-1,-1), 0.3, CINZA_BORDA),
+        ("LEFTPADDING",  (0,0), (-1,-1), 4),
+        ("RIGHTPADDING", (0,0), (-1,-1), 4),
+        ("TOPPADDING",   (0,0), (-1,-1), 3),
+        ("BOTTOMPADDING",(0,0), (-1,-1), 3),
+    ])
+    t = Table(alimentos, colWidths=col_w)
+    t.setStyle(style)
+    tw, th = t.wrapOn(c, W - 30*mm, H)
+    t.drawOn(c, 15*mm, y - th)
+
+    _rodape_pagina(c, nome, 3)
+    c.showPage()
+
+    # ─── PÁGINA 4 — Metas ────────────────────────────────────────────────
+    _cabecalho_pagina(c, "Metas da Consulta")
+    y = H - 32*mm
+    y = _titulo_secao(c, y, "5. Metas Combinadas na Consulta", cor=CINZA_ESCURO)
+
+    y -= 3*mm
+    c.setFont("Helvetica", 9)
+    c.setFillColor(CINZA_TEXTO)
+    c.drawString(15*mm, y, "Preencha junto com o paciente durante a consulta:")
+    y -= 10*mm
+
+    metas_dados = [
+        ["Semana", "O que vamos mudar?", "Como fazer na prática", "Prazo"],
+        ["1", "", "", ""],
+        ["2", "", "", ""],
+        ["3", "", "", ""],
+        ["4", "", "", ""],
+    ]
+    metas_cols = [18*mm, 65*mm, 65*mm, 27*mm]
+    metas_style = TableStyle([
+        ("BACKGROUND",   (0,0), (-1,0),  CINZA_ESCURO),
+        ("TEXTCOLOR",    (0,0), (-1,0),  BRANCO),
+        ("FONTNAME",     (0,0), (-1,0),  "Helvetica-Bold"),
+        ("FONTSIZE",     (0,0), (-1,0),  9),
+        ("ALIGN",        (0,0), (0,-1),  "CENTER"),
+        ("FONTNAME",     (0,1), (-1,-1), "Helvetica"),
+        ("FONTSIZE",     (0,1), (-1,-1), 9),
+        ("ROWBACKGROUNDS", (0,1), (-1,-1), [BRANCO, CINZA_ALT]),
+        ("GRID",         (0,0), (-1,-1), 0.4, CINZA_BORDA),
+        ("MINROWHEIGHT", (0,1), (-1,-1), 18*mm),
+        ("TOPPADDING",   (0,0), (-1,-1), 4),
+        ("BOTTOMPADDING",(0,0), (-1,-1), 4),
+        ("LEFTPADDING",  (0,0), (-1,-1), 5),
+    ])
+    tm = Table(metas_dados, colWidths=metas_cols)
+    tm.setStyle(metas_style)
+    tmw, tmh = tm.wrapOn(c, W - 30*mm, H)
+    tm.drawOn(c, 15*mm, y - tmh)
+
+    # Mensagem final
+    y_msg = y - tmh - 15*mm
+    _card(c, 15*mm, y_msg - 8*mm, W - 30*mm, 14*mm,
+          cor_fundo=CINZA_FUNDO, cor_borda=CINZA_BORDA)
+    c.setFillColor(CINZA_ESCURO)
+    c.setFont("Helvetica-Bold", 11)
+    c.drawCentredString(W/2, y_msg - 2*mm,
+                        "Pequenos passos geram grandes resultados. Confie em você!")
+
+    _rodape_pagina(c, nome, 4)
+    c.save()
+
+    return buf.getvalue()

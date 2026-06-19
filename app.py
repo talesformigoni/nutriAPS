@@ -132,6 +132,7 @@ with st.sidebar:
     st.page_link("pages/01_👥_Populacao_Geral.py", label="👥  População Geral")
     st.page_link("pages/02_🤰_Gestantes.py",       label="🤰  Gestantes")
     st.page_link("pages/03_👴_Idosos.py",          label="👴  Idosos")
+    st.page_link("pages/05_⚖️_Obesidade.py",          label="⚖️  Linha de Obesidade")
 
     # --- CSS EXCLUSIVO E TÍTULO PARA O PRAR ---
     st.markdown("""
@@ -187,10 +188,10 @@ with main_col:
         unsafe_allow_html=True
     )
 
-    # --- CARDS CLICÁVEIS NATIVOS ---
-    col1, col2, col3 = st.columns(3, gap="large")
+# --- CARDS CLICÁVEIS NATIVOS (GRID 2x2) ---
+    linha1_col1, linha1_col2 = st.columns(2, gap="large")
 
-    with col1:
+    with linha1_col1:
         st.markdown("""
             <a href="Populacao_Geral" target="_self" class="card-link">
                 <div class="card-wrapper">
@@ -211,7 +212,7 @@ with main_col:
             </a>
         """, unsafe_allow_html=True)
 
-    with col2:
+    with linha1_col2:
         st.markdown("""
             <a href="Gestantes" target="_self" class="card-link">
                 <div class="card-wrapper">
@@ -232,7 +233,11 @@ with main_col:
             </a>
         """, unsafe_allow_html=True)
 
-    with col3: # <-- NOVO BLOCO DO CARD DOS IDOSOS
+    st.markdown("<br>", unsafe_allow_html=True) # Espaçamento sutil entre as linhas
+    
+    linha2_col1, linha2_col2 = st.columns(2, gap="large")
+
+    with linha2_col1:
         st.markdown("""
             <a href="Idosos" target="_self" class="card-link">
                 <div class="card-wrapper">
@@ -246,6 +251,26 @@ with main_col:
                         <span class="tag">Geriatria</span>
                         <span class="tag">Cálculos Específicos</span>
                         <span class="tag">Recomendações</span>
+                    </div>
+                    <span class="card-arrow">↗</span>
+                </div>
+            </a>
+        """, unsafe_allow_html=True)
+
+    with linha2_col2: # <-- NOVO CARD DA OBESIDADE AQUI
+        st.markdown("""
+            <a href="Obesidade" target="_self" class="card-link">
+                <div class="card-wrapper">
+                    <span class="card-icon">⚖️</span>
+                    <div class="card-title">Linha de Obesidade</div>
+                    <div class="card-desc">
+                        Estratificação de risco metabólico, rastreio de comorbidades e protocolo de 
+                        encaminhamento (Cuidado Compartilhado ou Cirurgia Bariátrica).
+                    </div>
+                    <div class="card-tags">
+                        <span class="tag">Semáforo Clínico</span>
+                        <span class="tag">Comorbidades</span>
+                        <span class="tag">Bariátrica</span>
                     </div>
                     <span class="card-arrow">↗</span>
                 </div>
