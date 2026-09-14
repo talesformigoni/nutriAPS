@@ -77,7 +77,7 @@ with st.sidebar:
     st.page_link("pages/02_🤰_Gestantes.py",       label="🤰  Gestantes")
     st.page_link("pages/03_👴_Idosos.py",          label="👴  Idosos")
     st.page_link("pages/05_⚖️_Obesidade.py",          label="⚖️  Linha de Obesidade")
-    st.page_link("pages/06_👶_Pediatria_APLV.py", label="👶 Pediatria / APLV")
+    st.page_link("pages/06_👶_Pediatria_APLV.py", label="👶  Pediatria / APLV")
 
     st.markdown("""
         <style>
@@ -209,7 +209,7 @@ with main_col:
         </div>
         """, unsafe_allow_html=True)
 
-    with col4: # <-- NOVO CARD DA INTELIGÊNCIA DE OBESIDADE
+    with col4: 
         st.markdown("""
         <div class="card-estudo" style="height: 100%;">
             <h4>Linha de Obesidade (CDSS)</h4>
@@ -317,6 +317,30 @@ with main_col:
 </div>
 """, unsafe_allow_html=True)
 
+# --- SEÇÃO 6 — LINHA DE CUIDADO PEDIÁTRICA E APLV ---
+    st.header("6. Linha de Cuidado Pediátrica e Manejo da APLV")
+    st.markdown("<p style='font-size:0.95rem; margin-top:-0.5rem; color:#5A7260;'>Automação do Regulamento Técnico do Programa de Alergia à Proteína do Leite de Vaca do Estado de Rondônia (PAPLVRO).</p>", unsafe_allow_html=True)
+
+    st.markdown("""
+<div class="card-estudo">
+    <h4>6.1 Triagem Antropométrica Padrão OMS</h4>
+    <p>O módulo pediátrico implementa as curvas de crescimento oficiais da <strong>Organização Mundial da Saúde (OMS, 2006/2007)</strong> para o cálculo exato do Escore-Z. Através de interpolação matemática, o sistema classifica com precisão os indicadores de Peso por Idade (P/I), Estatura por Idade (E/I) e IMC por Idade (IMC/I), adotando rigorosamente a nomenclatura exigida pela regulação estadual, sinalizando desvios nutricionais essenciais para a liberação de fórmulas.</p>
+</div>
+""", unsafe_allow_html=True)
+
+    st.markdown("""
+<div class="card-estudo">
+    <h4>6.2 Engenharia Reversa e Protocolo GENE-SESAU 2026</h4>
+    <p>Para garantir a segurança, a conformidade legal e a precisão na dispensação de fórmulas infantis especiais, o sistema foi arquitetado com base nos dados e regulamentos mais atuais da <strong>Gerência Estadual de Nutrição Enteral (GENE-SESAU 2026)</strong>.</p>
+    <p>A arquitetura de cálculo da plataforma utiliza uma lógica de <em>engenharia reversa</em> para evitar prescrições de volumes que excedam ou não se adequem ao teto estadual de latas permitido por faixa etária (Tabela Y). O algoritmo processa simultaneamente de forma silenciosa:</p>
+    <ul style="line-height: 1.6; margin-left: 20px;">
+        <li><strong>Gasto Energético:</strong> Avaliação fisiológica baseada na Equação de Schofield para o Gasto Energético Total (GET) e na recomendação de necessidades de energia da FAO/WHO (2004) e de proteínas do IOM (2005) para o Valor Energético Total (VET).</li>
+        <li><strong>Desconto de Alimentação Complementar:</strong> Abatimento calórico automático preconizado pelo relatório da CONITEC para crianças acima de 6 meses.</li>
+        <li><strong>Formatação Regulatória do Laudo:</strong> Conversão dos volumes exatos e proporção de diluição correta de cada fórmula (ex: Pregomin, Neocate, Aptamil), gerando instantaneamente o espelho de prescrição dietética formatado e idêntico ao modelo físico exigido pelo Estado.</li>
+    </ul>
+</div>
+""", unsafe_allow_html=True)
+
     # --- REFERÊNCIAS ---
     st.markdown("<br>", unsafe_allow_html=True)
     st.header("📚 Referências Bibliográficas")
@@ -344,6 +368,9 @@ with main_col:
         </p>
         <p style="margin-bottom: 12px; text-indent: -1.5rem; padding-left: 1.5rem;">
             MONTEIRO, C. A. et al. Classificação NOVA: o sistema epidemiológico reconhecido internacionalmente. Desenvolvido pelo Núcleo de Pesquisas Epidemiológicas em Nutrição e Saúde (NUPENS/USP). Disponível em: https://nupens.fsp.usp.br/a-classificacao-nova/. Acesso em: 18 jun. 2026.
+        </p>
+        <p style="margin-bottom: 12px; text-indent: -1.5rem; padding-left: 1.5rem;">
+            RONDÔNIA. Secretaria de Estado da Saúde. Gerência Estadual de Nutrição Enteral (GENE). Regulamento Técnico do Programa de Alergia à Proteína do Leite de Vaca do Estado de Rondônia (PAPLVRO). Porto Velho: SESAU-RO, 2026.
         </p>
         <p style="margin-bottom: 12px; text-indent: -1.5rem; padding-left: 1.5rem;">
             RONDÔNIA. Secretaria de Estado da Saúde. Subdiretoria Técnica em Saúde. Coordenadoria de Doenças e Condições Crônicas. Núcleo de Sobrepeso e Obesidade. Linha de Cuidado à Pessoa com Sobrepeso e Obesidade no Estado de Rondônia. Porto Velho: SESAU-RO, 2024.
