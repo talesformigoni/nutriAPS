@@ -77,6 +77,7 @@ with st.sidebar:
     st.page_link("pages/02_🤰_Gestantes.py",       label="🤰  Gestantes")
     st.page_link("pages/03_👴_Idosos.py",          label="👴  Idosos")
     st.page_link("pages/05_⚖️_Obesidade.py",          label="⚖️  Linha de Obesidade")
+    st.page_link("pages/06_👶_Pediatria_APLV.py", label="👶 Pediatria / APLV")
 
     st.markdown("""
         <style>

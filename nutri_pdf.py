@@ -1690,3 +1690,143 @@ def gerar_pdf_obesidade(nome, peso, altura, imc, classif, nivel_macc, fase_mudan
     c.save()
 
     return buf.getvalue()
+
+# ═══════════════════════════════════════════════════════════════════════════
+# PDF: LAUDO NUTRICIONAL OFICIAL SESAU-RO (APLV) - ESCALA DE CINZA
+# ═══════════════════════════════════════════════════════════════════════════
+def gerar_pdf_laudo_aplv(dados):
+    import datetime
+    import textwrap
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from io import BytesIO
+
+    buf = BytesIO()
+    c = canvas.Canvas(buf, pagesize=A4)
+    W, H = A4
+
+    # Fontes e Cores (Preto e Cinza para impressão na APS)
+    TITULO = "Helvetica-Bold"
+    TEXTO = "Helvetica"
+    
+    y = H - 20*mm
+    
+    # ── Cabeçalho ──
+    c.setFont(TITULO, 11)
+    c.drawCentredString(W/2, y, "LAUDO NUTRICIONAL PARA SOLICITAÇÃO DE FÓRMULAS INFANTIS")
+    y -= 5*mm
+    c.drawCentredString(W/2, y, "E DIETAS ENTERAIS ADULTO OU PEDIÁTRICAS")
+    y -= 12*mm
+    
+    # ── 1. Identificação ──
+    c.setFont(TITULO, 10)
+    c.drawString(15*mm, y, "1. IDENTIFICAÇÃO DO USUÁRIO")
+    y -= 6*mm
+    
+    c.setFont(TEXTO, 9)
+    c.drawString(15*mm, y, f"Nome Completo: {dados.get('nome', '')}")
+    y -= 6*mm
+    c.drawString(15*mm, y, f"Sexo: {dados.get('sexo', '')}          Data de nascimento: {dados.get('data_nasc', '')}")
+    y -= 6*mm
+    c.drawString(15*mm, y, f"CPF: {dados.get('cpf', '')}          RG: {dados.get('rg', '')}          CNS: {dados.get('cns', '')}")
+    y -= 6*mm
+    c.drawString(15*mm, y, f"Nome completo da mãe: {dados.get('nome_mae', '')}")
+    y -= 6*mm
+    c.drawString(15*mm, y, f"Responsável: {dados.get('nome_resp', '')}")
+    y -= 6*mm
+    c.drawString(15*mm, y, f"CPF: {dados.get('cpf_resp', '')}          RG: {dados.get('rg_resp', '')}          CNS: {dados.get('cns_resp', '')}")
+    y -= 6*mm
+    c.drawString(15*mm, y, f"Endereço: {dados.get('endereco', '')}")
+    y -= 6*mm
+    c.drawString(15*mm, y, f"Município de residência: {dados.get('municipio', '')}          UF: {dados.get('uf', '')}          CEP: {dados.get('cep', '')}")
+    y -= 6*mm
+    c.drawString(15*mm, y, f"Telefone(s): {dados.get('telefone', '')}")
+    y -= 10*mm
+    
+    # ── 2. Avaliação Nutricional ──
+    c.setFont(TITULO, 10)
+    c.drawString(15*mm, y, "2. AVALIAÇÃO NUTRICIONAL")
+    y -= 6*mm
+    
+    c.setFont(TEXTO, 9)
+    c.drawString(15*mm, y, f"Peso (kg): {dados.get('peso', '')} kg          Altura (cm): {dados.get('altura', '')} cm          IMC: {dados.get('imc', '')} kg/m²")
+    y -= 6*mm
+    c.drawString(15*mm, y, f"Diagnóstico Antropométrico: {dados.get('diag_antropo', '')}")
+    y -= 6*mm
+    c.drawString(15*mm, y, "Via de alimentação:  VO ( X )         TNE + VO (   )       TNE exclusiva (   )")
+    y -= 10*mm
+    
+    # ── 3. Prescrição ──
+    c.setFont(TITULO, 10)
+    c.drawString(15*mm, y, "3. PRESCRIÇÃO NUTRICIONAL: ESPECIFICAÇÃO DA FÓRMULA NUTRICIONAL")
+    y -= 6*mm
+    
+    c.setFont(TEXTO, 9)
+    c.drawString(15*mm, y, "Favor sugerir fórmulas como opção:")
+    y -= 6*mm
+    c.drawString(15*mm, y, f"Opção A: {dados.get('formula', '')}")
+    y -= 6*mm
+    c.drawString(15*mm, y, f"Opção B: {dados.get('formula', '')}")
+    y -= 6*mm
+    c.drawString(15*mm, y, f"Opção C: {dados.get('formula', '')}")
+    y -= 8*mm
+    
+    c.setFont(TITULO, 9)
+    c.drawString(15*mm, y, "3.1. Quantidade em gramas/mililitros Diária e Mensal")
+    y -= 6*mm
+    
+    c.setFont(TEXTO, 9)
+    qtd_diaria = f"{dados.get('gramas_dia', '')} g e {dados.get('volume_ml', '')} ml"
+    qtd_mensal = f"{dados.get('gramas_mes', '')} g e {dados.get('volume_ml', 0) * 30} ml"
+    
+    c.drawString(15*mm, y, "                       Quantidade Diária                                  Quantidade Mensal")
+    y -= 6*mm
+    c.drawString(15*mm, y, f"Opção A:        {qtd_diaria}                           {qtd_mensal}")
+    y -= 6*mm
+    c.drawString(15*mm, y, f"Opção B:        {qtd_diaria}                           {qtd_mensal}")
+    y -= 6*mm
+    c.drawString(15*mm, y, f"Opção C:        {qtd_diaria}                           {qtd_mensal}")
+    y -= 10*mm
+    
+    # ── 4. Avaliação Subjetiva / Clínica ──
+    c.setFont(TITULO, 10)
+    c.drawString(15*mm, y, "AVALIAÇÃO NUTRICIONAL SUBJETIVA E INDICAÇÃO CLÍNICA")
+    y -= 6*mm
+    
+    c.setFont(TEXTO, 9)
+    linhas_indicacao = textwrap.wrap(dados.get('indicacao', ''), width=110)
+    for linha in linhas_indicacao:
+        c.drawString(15*mm, y, linha)
+        y -= 5*mm
+    y -= 5*mm
+    
+    # ── 5. Tratamentos Anteriores ──
+    c.setFont(TITULO, 10)
+    c.drawString(15*mm, y, "TRATAMENTO(S) ANTERIOR(ES)")
+    y -= 6*mm
+    
+    c.setFont(TEXTO, 9)
+    linhas_trat = textwrap.wrap(dados.get('tratamentos', ''), width=110)
+    for linha in linhas_trat:
+        c.drawString(15*mm, y, linha)
+        y -= 5*mm
+    y -= 15*mm
+    
+    # ── 6. Assinatura ──
+    c.setFont(TITULO, 10)
+    c.drawString(15*mm, y, "NUTRICIONISTA RESPONSÁVEL PELA SOLICITAÇÃO")
+    y -= 6*mm
+    
+    c.setFont(TEXTO, 9)
+    c.drawString(15*mm, y, f"Nome do profissional: {dados.get('nutri_nome', '')}")
+    y -= 6*mm
+    c.drawString(15*mm, y, f"CPF: {dados.get('nutri_cpf', '')}                                   CRN: {dados.get('nutri_crn', '')}")
+    y -= 25*mm
+    
+    c.line(60*mm, y, 150*mm, y)
+    y -= 5*mm
+    c.drawCentredString(W/2, y, "Assinatura e Carimbo")
+    
+    c.save()
+    return buf.getvalue()

@@ -1,4 +1,9 @@
 import math
+import pandas as pd
+
+# ==========================================
+# CÁLCULOS PARA ADULTOS E GESTANTES
+# ==========================================
 
 def calcular_imc(peso, altura_cm, idade=None):
     """
@@ -119,7 +124,6 @@ def calcular_classificacao_atalah(peso_atual, altura_cm, semana, peso_pre=0.0):
     gpg = None
     imc_pre = None
     
-    # Se o peso pré-gestacional foi informado, calculamos a meta ideal baseada nele
     if peso_pre > 0.0:
         imc_pre = peso_pre / (altura_m ** 2)
         gpg = peso_atual - peso_pre
@@ -132,7 +136,6 @@ def calcular_classificacao_atalah(peso_atual, altura_cm, semana, peso_pre=0.0):
         else:
             ganho_min, ganho_max = 5.0, 9.0
     else:
-        # Se não informado, estimamos a meta pelo estado atual de Atalah
         if classificacao_atual == "Baixo Peso":
             ganho_min, ganho_max = 12.5, 18.0
         elif classificacao_atual == "Eutrofia / Adequado":
@@ -142,7 +145,6 @@ def calcular_classificacao_atalah(peso_atual, altura_cm, semana, peso_pre=0.0):
         else:
             ganho_min, ganho_max = 5.0, 9.0
 
-    # Definição dos textos automatizados com base na classificação ATUAL de Atalah
     if classificacao_atual == "Baixo Peso":
         diagnostico = "Seu corpo está se preparando para nutrir uma nova vida, e a sua curva atual indica baixo peso para esta fase da gestação."
         conselho = f"Para garantir que o bebê cresça forte, nosso objetivo de ganho total deve ser entre {ganho_min} e {ganho_max} kg. Não coma grandes volumes à força, mas aumente a energia das refeições adicionando opções nutritivas: abacate, azeite, raízes e ovos. Cada grama ganha com saúde é um tijolinho na formação do bebê!"
@@ -282,3 +284,361 @@ def avaliar_gestante_ms2026(peso_atual, altura_cm, semana, peso_pre=0.0, pdf_mod
         "is_peso_estimado": is_peso_estimado, "diagnostico": diag,
         "conselho": cons, "pdf_mode": pdf_mode
     }
+
+# ==========================================
+# CÁLCULOS PEDIÁTRICOS (APLV - TABELA Y & OMS)
+# ==========================================
+
+import math
+import pandas as pd
+
+def calcular_aplv(idade_meses, tipo_formula, peso=0.0, sexo="M"):
+    """
+    Calcula a quantidade mensal de fórmula infantil para APLV (Tabela Y),
+    incorporando volumes dinâmicos de diluição, gramaturas exatas,
+    e cruzando com requerimentos de energia (FAO/WHO), proteína (IOM) 
+    e descontos de introdução alimentar (CONITEC).
+    """
+    banco_formulas = {
+        "Pregomin Pepti": {
+            "peso_medida": 4.3, "vol_agua": 30.0, "kcal_100ml": 69.0, "nota": None
+        },
+        "Aptamil SL (Sem Lactose)": {
+            "peso_medida": 4.3, "vol_agua": 30.0, "kcal_100ml": 69.0, "nota": None
+        },
+        "Neocate LCP (Até 3 anos)": {
+            "peso_medida": 4.6, "vol_agua": 30.0, "kcal_100ml": 69.0, "nota": None
+        },
+        "Aptamil Soja 1 (0 a 6 meses)": {
+            "peso_medida": 4.6, "vol_agua": 30.0, "kcal_100ml": 69.0, 
+            "nota": "*Atenção: Protocolos do MS/SESAU geralmente contraindicam fórmula de soja para menores de 6 meses."
+        },
+        "Aptamil Soja 2 (A partir 6 meses)": {
+            "peso_medida": 4.7, "vol_agua": 30.0, "kcal_100ml": 69.0, 
+            "nota": "*A recomendação da embalagem varia de 4,6g a 4,8g por 30 mL (cálculo realizado usando a média de 4,7g)."
+        },
+        "Neocate Advance (Acima 1 ano)": {
+            "peso_medida": 25.0, "vol_agua": 85.0, "kcal_100ml": 69.0, "nota": None
+        }
+    }
+
+    # ==========================================================
+    # VALIDAÇÕES ETÁRIAS E DE PRODUTO
+    # ==========================================================
+    if idade_meses < 0 or idade_meses > 24:
+        return {"erro": "A Tabela Y contempla apenas crianças de 0 a 24 meses."}
+
+    if tipo_formula not in banco_formulas:
+        return {"erro": "Tipo de fórmula não encontrado no banco de dados."}
+
+    if tipo_formula == "Neocate Advance (Acima 1 ano)" and idade_meses < 12:
+        return {"erro": "O Neocate Advance é indicado apenas para crianças acima de 1 ano (12 meses)."}
+
+    if tipo_formula == "Aptamil Soja 2 (A partir 6 meses)" and idade_meses < 6:
+        return {"erro": "O Aptamil Soja 2 é indicado apenas a partir do 6º mês."}
+
+    if tipo_formula == "Aptamil Soja 1 (0 a 6 meses)" and idade_meses < 6:
+        return {"erro": "A Tabela Y não prevê fórmula de soja para menores de 6 meses."}
+
+    # ==========================================================
+    # A) LATAS POR MÊS (TABELA Y)
+    # ==========================================================
+    if idade_meses < 3: 
+        latas_mes = 9
+    elif idade_meses < 6: 
+        latas_mes = 10
+    elif idade_meses < 9: 
+        latas_mes = 8
+    elif idade_meses < 12: 
+        latas_mes = 7
+    else: 
+        # 12 a 24 meses
+        latas_mes = 7 if "Neocate" in tipo_formula else 6
+
+    # ==========================================================
+    # B, C e D) CONVERSÃO DE PESO
+    # ==========================================================
+    peso_lata = 400
+    gramas_mes = latas_mes * peso_lata
+    gramas_dia = gramas_mes / 30.0
+
+    # ==========================================================
+    # X) FREQUÊNCIA DIÁRIA DE MAMADEIRAS
+    # ==========================================================
+    if idade_meses < 1: 
+        freq_mamadeiras = 8
+    elif idade_meses < 4: 
+        freq_mamadeiras = 6
+    elif idade_meses < 6: 
+        freq_mamadeiras = 5
+    elif idade_meses < 9: 
+        freq_mamadeiras = 4
+    else: 
+        freq_mamadeiras = 3
+
+    # ==========================================================
+    # E, F e G) VOLUMES E CALORIAS DIÁRIAS (COM REGRA DE TRÊS DINÂMICA)
+    # ==========================================================
+    dados_formula = banco_formulas[tipo_formula]
+    peso_medida = dados_formula["peso_medida"]
+    vol_agua_medida = dados_formula["vol_agua"]
+    kcal_formula = dados_formula["kcal_100ml"]
+    nota_observacao = dados_formula["nota"]
+
+    # Gramas de pó por mamadeira
+    gramas_mamadeira = gramas_dia / freq_mamadeiras
+    
+    # Conversão dinâmica
+    volume_mamadeira_ml = (gramas_mamadeira * vol_agua_medida) / peso_medida
+    
+    volume_diario_ml = volume_mamadeira_ml * freq_mamadeiras
+    kcal_dia = (volume_diario_ml * kcal_formula) / 100.0
+
+    # ==========================================================
+    # H) REQUERIMENTOS NUTRICIONAIS (FAO/WHO, IOM, CONITEC)
+    # ==========================================================
+    
+    # 1. Desconto de Alimentação Complementar (CONITEC)
+    if idade_meses < 6:
+        desconto_kcal = 0
+    elif idade_meses < 8: # Entre 6 meses e 7 meses e 29 dias
+        desconto_kcal = 200
+    elif idade_meses < 12: # Entre 8 meses e 11 meses e 29 dias
+        desconto_kcal = 300
+    else: # Entre 12 meses e 24 meses
+        desconto_kcal = 550
+
+    # 2. Necessidades de Proteína g/kg/dia (IOM, 2005)
+    if idade_meses < 6: prot_kg = 1.52
+    elif idade_meses < 12: prot_kg = 1.20
+    else: prot_kg = 1.05
+
+    # 3. Necessidades de Energia Kcal/kg/dia e Kcal/Total/Dia (FAO/WHO, 2004)
+    is_masc = str(sexo).upper().startswith('M')
+    
+    if idade_meses < 3:
+        energia_kg = 105 if is_masc else 100
+        ref_kcal_total = 560 if is_masc else 510
+    elif idade_meses < 6:
+        energia_kg = 81 if is_masc else 83
+        ref_kcal_total = 605 if is_masc else 569
+    elif idade_meses < 9:
+        energia_kg = 79 if is_masc else 78
+        ref_kcal_total = 678 if is_masc else 628
+    elif idade_meses < 12:
+        energia_kg = 80 if is_masc else 79
+        ref_kcal_total = 752 if is_masc else 694
+    else:
+        energia_kg = 83 if is_masc else 80
+        ref_kcal_total = 948 if is_masc else 865
+
+    # 4. Cálculo final do alvo calórico da fórmula
+    necessidade_kcal_total = (energia_kg * peso) if peso > 0 else ref_kcal_total
+    necessidade_prot_total = (prot_kg * peso) if peso > 0 else 0.0
+    
+    alvo_formula_kcal = necessidade_kcal_total - desconto_kcal
+    if alvo_formula_kcal < 0: alvo_formula_kcal = 0
+
+    adequacao_kcal = (kcal_dia / alvo_formula_kcal * 100) if alvo_formula_kcal > 0 else 0
+
+    return {
+        "erro": None,
+        "latas_mes": latas_mes,
+        "peso_lata": peso_lata,
+        "peso_medida": peso_medida,
+        "vol_agua_medida": vol_agua_medida,
+        "gramas_mes": gramas_mes,
+        "gramas_dia": round(gramas_dia, 1),
+        "freq_mamadeiras": freq_mamadeiras,
+        "gramas_mamadeira": round(gramas_mamadeira, 1),
+        "volume_mamadeira_ml": round(volume_mamadeira_ml, 1),
+        "volume_diario_ml": round(volume_diario_ml, 1),
+        "kcal_dia": round(kcal_dia, 1),
+        "tipo_formula": tipo_formula,
+        "idade_meses": idade_meses,
+        "nota_observacao": nota_observacao,
+        
+        # Novas chaves nutricionais
+        "req_energia_kg": energia_kg,
+        "req_prot_kg": prot_kg,
+        "necessidade_kcal_total": round(necessidade_kcal_total, 1),
+        "necessidade_prot_total": round(necessidade_prot_total, 1),
+        "desconto_alimentacao_complementar": desconto_kcal,
+        "alvo_formula_kcal": round(alvo_formula_kcal, 1),
+        "adequacao_tabela_y_perc": round(adequacao_kcal, 1)
+    }
+
+
+# Cache global para evitar leitura repetitiva do CSV e melhorar performance
+_df_oms_cache = None
+
+def _obter_dados_oms():
+    global _df_oms_cache
+    if _df_oms_cache is None:
+        try:
+            _df_oms_cache = pd.read_csv('tabelas_oms.csv', sep=';')
+            _df_oms_cache['Mes'] = _df_oms_cache['Mes'].astype(int)
+        except Exception:
+            pass
+    return _df_oms_cache
+
+def calcular_escore_z_oms(indicador, sexo, idade_meses, valor_observado):
+    """
+    Calcula o Escore Z exato baseado na tabela LMS da OMS.
+    Inclui interpolação para meses faltantes e correção de extremos (+/- 3 SD).
+    """
+    df = _obter_dados_oms()
+    if df is None:
+        return None
+        
+    if idade_meses < 0:
+        idade_meses = 0
+
+    df_filtro = df[(df['Indicador'].str.lower() == str(indicador).lower()) & 
+                   (df['Sexo'].str.upper() == str(sexo).upper())]
+    
+    if df_filtro.empty:
+        return None
+
+    df_exato = df_filtro[df_filtro['Mes'] == idade_meses]
+    if not df_exato.empty:
+        row = df_exato.iloc[-1]
+        L, M, S = float(row['L']), float(row['M']), float(row['S'])
+    else:
+        # Lógica de interpolação se não achar o mês exato
+        meses = sorted(df_filtro['Mes'].unique().tolist())
+        if idade_meses > meses[-1]:
+            row = df_filtro[df_filtro['Mes'] == meses[-1]].iloc[-1]
+            L, M, S = float(row['L']), float(row['M']), float(row['S'])
+        else:
+            L, M, S = None, None, None
+            for i in range(len(meses) - 1):
+                m0, m1 = meses[i], meses[i+1]
+                if m0 <= idade_meses <= m1:
+                    t = (idade_meses - m0) / (m1 - m0)
+                    r0 = df_filtro[df_filtro['Mes'] == m0].iloc[-1]
+                    r1 = df_filtro[df_filtro['Mes'] == m1].iloc[-1]
+                    L = r0['L'] + t * (r1['L'] - r0['L'])
+                    M = r0['M'] + t * (r1['M'] - r0['M'])
+                    S = r0['S'] + t * (r1['S'] - r0['S'])
+                    break
+            if L is None: 
+                return None
+
+    # Equação exata da OMS para Escore Z
+    try:
+        if L == 0:
+            z = math.log(valor_observado / M) / S
+        else:
+            z = (((valor_observado / M) ** L) - 1) / (L * S)
+            
+        # Regra da OMS para desvios extremos (+/- 3 SD)
+        if abs(z) > 3:
+            def sd(n): 
+                return M * (1 + L * S * n) ** (1/L) if L != 0 else M * math.exp(S * n)
+            
+            if z > 3: 
+                z = 3 + (valor_observado - sd(3)) / (sd(3) - sd(2))
+            else: 
+                z = -3 + (valor_observado - sd(-3)) / (sd(-2) - sd(-3))
+                
+        return round(z, 2)
+    except Exception:
+        return None
+
+def gerar_diagnostico_oms(peso, altura_cm, idade_meses, sexo_str):
+    """
+    Cruza o Peso e a Altura com o Escore Z e gera um laudo rápido.
+    """
+    sexo = 'M' if sexo_str.lower() == 'masculino' else 'F'
+    
+    z_peso = calcular_escore_z_oms('peso', sexo, idade_meses, peso)
+    z_altura = calcular_escore_z_oms('altura', sexo, idade_meses, altura_cm)
+    
+    if z_peso is None or z_altura is None:
+        return "Adequado para idade (Escore Z P/I > -2 e < +2)"
+        
+    # Classificação P/I
+    if idade_meses <= 60:
+        if z_peso < -3: classif_peso = "Peso muito baixo p/ idade"
+        elif z_peso < -2: classif_peso = "Peso baixo p/ idade"
+        elif z_peso <= 2: classif_peso = "Peso adequado"
+        else: classif_peso = "Peso elevado p/ idade"
+    else:
+        if z_peso < -3: classif_peso = "Peso muito baixo p/ idade"
+        elif z_peso < -2: classif_peso = "Peso baixo p/ idade"
+        elif z_peso <= 1: classif_peso = "Peso adequado"
+        else: classif_peso = "Peso elevado (Ver IMC)"
+    
+    # Classificação A/I
+    if z_altura < -3: classif_altura = "Muito baixa estatura"
+    elif z_altura < -2: classif_altura = "Baixa estatura p/ idade"
+    elif z_altura <= 3: classif_altura = "Estatura adequada"
+    else: classif_altura = "Estatura elevada"
+    
+    return f"{classif_peso} [Z: {z_peso:+.2f}] e {classif_altura} [Z: {z_altura:+.2f}]"
+
+def calcular_diagnostico_detalhado_oms(peso, altura_cm, idade_meses, sexo_str):
+    """
+    Gera o laudo detalhado utilizando as classificações atualizadas da OMS,
+    diferenciando os pontos de corte de <= 60 meses e > 60 meses.
+    """
+    sexo = 'M' if sexo_str.lower() == 'masculino' else 'F'
+    z_peso = calcular_escore_z_oms('peso', sexo, idade_meses, peso)
+    z_altura = calcular_escore_z_oms('altura', sexo, idade_meses, altura_cm)
+    
+    altura_m = altura_cm / 100.0
+    val_imc = peso / (altura_m ** 2) if altura_m > 0 else 0
+    z_imc = calcular_escore_z_oms('imc', sexo, idade_meses, val_imc)
+    
+    # 1. Formatação IMC
+    if z_imc is None: 
+        str_imc, cl_imc = "Sem dados", "Sem dados"
+    else:
+        if idade_meses <= 60:
+            if z_imc < -3: cl_imc = "Magreza grave"; fx = "< -3"
+            elif z_imc < -2: cl_imc = "Magreza"; fx = "≥ -3 e < -2"
+            elif z_imc <= 1: cl_imc = "Eutrófico"; fx = "≥ -2 e ≤ +1"
+            elif z_imc <= 2: cl_imc = "Risco de sobrepeso"; fx = "> +1 e ≤ +2"
+            elif z_imc <= 3: cl_imc = "Sobrepeso"; fx = "> +2 e ≤ +3"
+            else: cl_imc = "Obesidade"; fx = "> +3"
+        else:
+            if z_imc < -3: cl_imc = "Magreza grave"; fx = "< -3"
+            elif z_imc < -2: cl_imc = "Magreza"; fx = "≥ -3 e < -2"
+            elif z_imc <= 1: cl_imc = "Eutrófico"; fx = "≥ -2 e ≤ +1"
+            elif z_imc <= 2: cl_imc = "Sobrepeso"; fx = "> +1 e ≤ +2"
+            elif z_imc <= 3: cl_imc = "Obesidade"; fx = "> +2 e ≤ +3"
+            else: cl_imc = "Obesidade Grave"; fx = "> +3"
+            
+        str_imc = f"IMC: {val_imc:.2f} kg/m² (Z: {z_imc:+.2f}) ➔ {fx} : {cl_imc}"
+
+    # 2. Formatação Peso por Idade
+    if z_peso is None: 
+        str_peso, cl_peso = "Sem dados", "Sem dados"
+    else:
+        if idade_meses <= 60:
+            if z_peso < -3: cl_peso = "Peso muito baixo p/ idade"; fx = "< -3"
+            elif z_peso < -2: cl_peso = "Peso baixo p/ idade"; fx = "≥ -3 e < -2"
+            elif z_peso <= 2: cl_peso = "Peso adequado"; fx = "≥ -2 e ≤ +2"
+            else: cl_peso = "Peso elevado p/ idade"; fx = "> +2"
+        else:
+            if z_peso < -3: cl_peso = "Peso muito baixo p/ idade"; fx = "< -3"
+            elif z_peso < -2: cl_peso = "Peso baixo p/ idade"; fx = "≥ -3 e < -2"
+            elif z_peso <= 1: cl_peso = "Peso adequado"; fx = "≥ -2 e ≤ +1"
+            else: cl_peso = "Peso elevado (Ver IMC)"; fx = "> +1"
+            
+        str_peso = f"Peso por idade (Z: {z_peso:+.2f}) ➔ {fx} : {cl_peso}"
+
+    # 3. Formatação Altura por Idade
+    if z_altura is None: 
+        str_altura, cl_alt = "Sem dados", "Sem dados"
+    else:
+        if z_altura < -3: cl_alt = "Muito baixa estatura"; fx = "< -3"
+        elif z_altura < -2: cl_alt = "Baixa estatura p/ idade"; fx = "≥ -3 e < -2"
+        elif z_altura <= 3: cl_alt = "Estatura adequada"; fx = "≥ -2 e ≤ +3"
+        else: cl_alt = "Estatura elevada"; fx = "> +3"
+        
+        str_altura = f"Estatura por idade (Z: {z_altura:+.2f}) ➔ {fx} : {cl_alt}"
+        
+    res_resumo = f"IMC: {val_imc:.2f} kg/m² | {cl_imc} / {cl_peso} / {cl_alt}"
+    return str_imc, str_peso, str_altura, res_resumo
