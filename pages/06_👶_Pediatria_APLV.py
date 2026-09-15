@@ -114,32 +114,32 @@ with st.sidebar:
 tradutor_sesau = {
     "Pregomin Pepti": {
         "codigo": "261",
-        "desc": "Fórmula infantil extensamente hidrolisada para lactentes de primeira infância, com alergia à proteína do leite de vaca ou de soja e distúrbios absortivos.",
+        "desc": "Fórmula infantil com proteína láctea extensamente hidrolisada sem lactose (FEH)",
         "peso_medida": 4.3, "vol_agua": 30.0
     },
     "Aptamil SL (Sem Lactose)": {
         "codigo": "264",
-        "desc": "Fórmula infantil sem lactose (FSL).",
+        "desc": "Fórmula infantil sem lactose (FSL)",
         "peso_medida": 4.3, "vol_agua": 30.0
     },
     "Neocate LCP (Até 3 anos)": {
         "codigo": "274",
-        "desc": "Fórmula Infantil à base de aminoácidos para crianças de primeira infância, isenta de proteína láctea, lactose (sem lactose adicionada), sacarose, galactose, frutose e glúten.",
+        "desc": "Fórmula infantil à base de aminoácidos livres (FAA)",
         "peso_medida": 4.6, "vol_agua": 30.0
     },
     "Aptamil Soja 1 (0 a 6 meses)": {
         "codigo": "272",
-        "desc": "Fórmula infantil de seguimento à base de soja, isenta de lactose e glúten, isenta de lactose e glúten(com DHA e ARA). Fase 1.",
+        "desc": "Fórmula infantil à base de proteína isolada de soja (FS)",
         "peso_medida": 4.6, "vol_agua": 30.0
     },
     "Aptamil Soja 2 (A partir 6 meses)": {
         "codigo": "272",
-        "desc": "Fórmula infantil de seguimento à base de soja, isenta de lactose e glúten, isenta de lactose e glúten(com DHA e ARA). Fase 2.",
-        "peso_medida": 4.7, "vol_agua": 30.0
+        "desc": "Fórmula infantil à base de proteína isolada de soja (FS)",
+        "peso_medida": 4.6, "vol_agua": 30.0
     },
     "Neocate Advance (Acima 1 ano)": {
         "codigo": "258",
-        "desc": "Dieta pediátrica para nutrição enteral à base de aminoácidos livres com restrição de lactose, para crianças de segunda e terceira infância.",
+        "desc": "Dieta pediátrica para nutrição enteral à base de aminoácidos livres com restrição de lactose",
         "peso_medida": 25.0, "vol_agua": 85.0
     }
 }
@@ -302,8 +302,25 @@ with main_col:
         col_esq, col_dir = st.columns([1, 1])
 
         with col_esq:
+            # Cálculo exato da idade em Anos, Meses e Dias
+            anos_i = data_aval.year - data_nasc.year
+            meses_i = data_aval.month - data_nasc.month
+            dias_i = data_aval.day - data_nasc.day
+            if dias_i < 0:
+                meses_i -= 1
+                dias_i += (data_aval.replace(day=1) - datetime.timedelta(days=1)).day
+            if meses_i < 0:
+                anos_i -= 1
+                meses_i += 12
+                
+            partes = []
+            if anos_i > 0: partes.append(f"{anos_i} ano{'s' if anos_i > 1 else ''}")
+            if meses_i > 0: partes.append(f"{meses_i} {'meses' if meses_i > 1 else 'mês'}")
+            if dias_i > 0 or not partes: partes.append(f"{dias_i} dia{'s' if dias_i > 1 else ''}")
+            str_idade = " e ".join([", ".join(partes[:-1]), partes[-1]] if len(partes) > 1 else partes)
+
             st.markdown('<div class="card-estudo"><h4>📋 AVALIAÇÃO NUTRICIONAL (OMS)</h4>', unsafe_allow_html=True)
-            st.markdown(f"<p class='linha-info'><b>Idade:</b> {idade_meses} meses</p>", unsafe_allow_html=True)
+            st.markdown(f"<p class='linha-info'><b>Idade:</b> {str_idade}</p>", unsafe_allow_html=True)
             st.markdown(f"<p class='linha-info'><b>Peso:</b> {peso:.3f} kg | <b>Altura:</b> {altura:.0f} cm</p>", unsafe_allow_html=True)
             st.markdown(f"<p class='linha-info'><b>IMC (kg/m²):</b> {imc_calc:.2f}</p>", unsafe_allow_html=True)
             st.markdown("<hr style='margin: 15px 0; border-top: 1px dashed #C4C7B6;'>", unsafe_allow_html=True)
@@ -325,6 +342,27 @@ with main_col:
             st.markdown('</div>', unsafe_allow_html=True)
 
         st.header("4. Espelho do Laudo - Tabela Oficial")
+
+        # CAIXAS DE SELEÇÃO PARA AS OPÇÕES 2 E 3
+        st.markdown("<p style='color:#5A7260; font-size:0.95rem; margin-top:-0.5rem;'>Adicionar fórmulas alternativas à tabela (Opcional):</p>", unsafe_allow_html=True)
+        c_f2, c_f3 = st.columns(2)
+        formula_2 = c_f2.selectbox("Opção 2", list(tradutor_sesau.keys()), index=None)
+        formula_3 = c_f3.selectbox("Opção 3", list(tradutor_sesau.keys()), index=None)
+        
+        # FUNÇÃO FANTASMA SÓ PARA A TABELA (AGORA COM MEMÓRIA DE CÁLCULO)
+        def gerar_linha_extra(form_nome):
+            if not form_nome:
+                return '<tr><td style="height: 35px;"></td><td></td><td></td></tr>'
+            calc_e = calcular_aplv_matematica(idade_meses, form_nome)
+            info_e = tradutor_sesau[form_nome]
+            
+            memoria_html = f'''<details style="margin-top: 5px; cursor: pointer; color: #2D5A34;"><summary style="font-size: 11px; font-weight: 600;">Ver memória de cálculo</summary><div style="margin-top: 4px; padding: 6px; background: #F0F6F1; border-radius: 4px; border-left: 3px solid #859B48; font-size: 11px; line-height: 1.4; color: #111;"><b>Total/mês:</b> {calc_e["latas"]} latas ({calc_e["g_mes"]:.0f}g)<br><b>Pó/dia:</b> {calc_e["g_dia"]:.1f}g<br><b>Frequência:</b> {calc_e["freq"]}x ao dia<br><b>Diluição:</b> {calc_e["g_porcao"]:.2f}g pó para {calc_e["ml_porcao"]:.0f} mL água</div></details>'''
+            
+            return f'<tr><td><strong>{info_e["codigo"]}</strong> - {info_e["desc"]}{memoria_html}</td><td>{calc_e["g_dia"]:.2f}g / {calc_e["ml_dia"]:.0f} ml</td><td>x 30 = {calc_e["g_mes"]:.0f}g / {(calc_e["ml_dia"]*30):.0f} ml<br><span style="color:#555; font-size:11px;">({calc_e["latas"]} latas)</span></td></tr>'
+            
+        linha_2 = gerar_linha_extra(formula_2)
+        linha_3 = gerar_linha_extra(formula_3)
+
         # CONSTRUÇÃO DA TABELA HTML IDÊNTICA AO WORD
         html_tabela = f"""
         <div class="tabela-container">
@@ -345,21 +383,24 @@ with main_col:
                 </tr>
                 <!-- LINHA TRADUZIDA AUTOMATICAMENTE -->
                 <tr>
-                    <td><strong>{codigo_ses}</strong> - {desc_oficial}</td>
+                    <td>
+                        <strong>{codigo_ses}</strong> - {desc_oficial}
+                        <details style="margin-top: 5px; cursor: pointer; color: #2D5A34;">
+                            <summary style="font-size: 11px; font-weight: 600;">Ver memória de cálculo</summary>
+                            <div style="margin-top: 4px; padding: 6px; background: #F0F6F1; border-radius: 4px; border-left: 3px solid #859B48; font-size: 11px; line-height: 1.4; color: #111;">
+                                <b>Total/mês:</b> {calc['latas']} latas ({calc['g_mes']:.0f}g)<br>
+                                <b>Pó/dia:</b> {calc['g_dia']:.1f}g<br>
+                                <b>Frequência:</b> {calc['freq']}x ao dia<br>
+                                <b>Diluição:</b> {calc['g_porcao']:.2f}g pó para {calc['ml_porcao']:.0f} mL água
+                            </div>
+                        </details>
+                    </td>
                     <td>{calc['g_dia']:.2f}g / {calc['ml_dia']:.0f} ml</td>
                     <td>x 30 = {calc['g_mes']:.0f}g / {(calc['ml_dia']*30):.0f} ml<br><span style="color:#555; font-size:11px;">({calc['latas']} latas)</span></td>
                 </tr>
-                <!-- LINHAS VAZIAS PADRÃO DO MODELO -->
-                <tr>
-                    <td style="height: 35px;"></td>
-                    <td></td>
-                    <td></td>
-                </tr>
-                <tr>
-                    <td style="height: 35px;"></td>
-                    <td></td>
-                    <td></td>
-                </tr>
+                <!-- OPÇÕES ADICIONAIS -->
+                {linha_2}
+                {linha_3}
                 <tr>
                     <td>Frasco</td>
                     <td></td>
@@ -382,7 +423,80 @@ with main_col:
         </div>
         """
         
-        st.markdown(html_tabela, unsafe_allow_html=True)
+        st.components.v1.html(f"""
+            <style>
+                .tabela-container {{
+                    background-color: #FFFFFF;
+                    padding: 5px;
+                    border-radius: 12px;
+                    font-family: 'Inter', sans-serif;
+                }}
+                .tabela-laudo {{
+                    width: 100%;
+                    border-collapse: collapse;
+                    font-size: 13px;
+                    color: #111111;
+                }}
+                .tabela-laudo td, .tabela-laudo th {{
+                    border: 1px solid #222222;
+                    padding: 8px 12px;
+                    vertical-align: middle;
+                    line-height: 1.4;
+                }}
+                .bg-gray {{
+                    background-color: #F4F4F4;
+                    font-weight: 600;
+                    text-align: center;
+                }}
+            </style>
+            {html_tabela}
+        """, height=420, scrolling=True)
+        
+        # ==========================================
+        # 5. ASSISTENTE CLÍNICO DE TRIAGEM (CDSS)
+        # ==========================================
+        st.markdown("---")
+        st.header("5. Assistente Clínico de Escolha (GENE-SESAU)")
+        st.markdown("<p style='color:#5A7260; font-size:1.05rem; margin-top:-0.5rem;'>Sugestão automática de fórmula baseada nos Quadros 6 e 7 do protocolo estadual.</p>", unsafe_allow_html=True)
+
+        with st.expander("🩺 Abrir Triagem Diagnóstica", expanded=False):
+            c_diag1, c_diag2 = st.columns(2)
+            
+            mecanismo = c_diag1.selectbox(
+                "Mecanismo da Alergia / Condição",
+                ["Selecione...", "APLV - Mediada por IgE", "APLV - Não mediada por IgE", "Intolerância à Lactose (Confirmada)"]
+            )
+            
+            sintomas_graves = c_diag2.radio(
+                "Sintomas Graves? (Anafilaxia, Enterocolite, Síndrome de Heiner, etc.)",
+                ["Não", "Sim"]
+            )
+
+            if mecanismo != "Selecione...":
+                st.markdown("<br><h5>🎯 Recomendação Oficial do Protocolo</h5>", unsafe_allow_html=True)
+                
+                # Regra 1: Intolerância à Lactose (Quadro 6)
+                if mecanismo == "Intolerância à Lactose (Confirmada)":
+                    st.info("**1ª Escolha:** Fórmula infantil sem lactose (FSL - Cód: 264)\n\n💡 *Considere utilizar o leite: Aptamil SL (Sem Lactose)*\n\n*Indicação:* Dor abdominal, inchaço, flatulência, diarreia. Confirmada por exames.")
+                
+                # Regra 2: Sintomas Graves/Anafilaxia (Sempre FAA - Quadro 6 e 7)
+                elif sintomas_graves == "Sim":
+                    st.error("**1ª Escolha:** Fórmula infantil à base de aminoácidos livres (FAA - Cód: 274)\n\n💡 *Considere utilizar o leite: Neocate LCP*\n\n*Nota:* As FAA devem ser a primeira escolha em casos graves independentemente da faixa etária.")
+                
+                # Regra 3: Menores de 6 meses (Quadro 7)
+                elif idade_meses < 6:
+                    st.success("**1ª Opção:** Fórmula c/ proteína extensamente hidrolisada (FEH - Cód: 261)\n💡 *Considere utilizar o leite: Pregomin Pepti*\n\n**2ª Opção:** Fórmula c/ aminoácidos livres (FAA - Cód: 274)\n💡 *Considere utilizar o leite: Neocate LCP*")
+                
+                # Regra 4: De 6 a 24 meses (Quadro 7)
+                elif idade_meses >= 6 and idade_meses <= 24:
+                    if mecanismo == "APLV - Não mediada por IgE":
+                        st.success("**1ª Opção:** Fórmula c/ proteína extensamente hidrolisada (FEH - Cód: 261)\n💡 *Considere utilizar o leite: Pregomin Pepti*\n\n**2ª Opção:** Fórmula c/ aminoácidos livres (FAA - Cód: 274)\n💡 *Considere utilizar o leite: Neocate LCP*")
+                    elif mecanismo == "APLV - Mediada por IgE":
+                        st.success("**1ª Opção:** Fórmula à base de soja (FS - Cód: 272)\n💡 *Considere utilizar o leite: Aptamil Soja 2*\n\n**2ª Opção:** Fórmula c/ proteína extensamente hidrolisada (FEH - Cód: 261)\n💡 *Considere utilizar o leite: Pregomin Pepti*\n\n**3ª Opção:** Fórmula c/ aminoácidos livres (FAA - Cód: 274)\n💡 *Considere utilizar o leite: Neocate LCP*\n\n*Nota:* As fórmulas de soja (FS) devem ser a primeira escolha nos casos com baixo risco de desenvolvimento de reações anafiláticas.")
+                
+                # Regra 5: Acima de 24 meses (Fallback)
+                else:
+                    st.warning("Paciente acima de 24 meses. Avaliar desmame ou necessidade de fórmulas específicas de seguimento.\n\n💡 *Considere utilizar o leite: Neocate Advance (Acima de 1 ano)*")
         
     else:
         st.markdown("<p class='aviso-vazio'>Preencha todos os campos biométricos e selecione a fórmula para gerar a tabela de prescrição do laudo.</p>", unsafe_allow_html=True)
