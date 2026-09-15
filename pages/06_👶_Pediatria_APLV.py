@@ -299,6 +299,12 @@ with main_col:
         desc_oficial = info_form["desc"]
 
         st.header("3. Resultados Clínicos e Matemáticos")
+
+        # AVISO DE IDADE DA GENE-SESAU (24 meses + 1 dia) - FORA DAS COLUNAS
+        idade_total_dias = (data_aval - data_nasc).days
+        if idade_total_dias > (365 * 2):
+            st.warning("⚠️ **Atenção:** A criança possui mais de 24 meses (2 anos). De acordo com o regulamento do PAPLVRO (GENE-SESAU), ela não atende ao critério de idade para a dispensação destas fórmulas infantis.")
+
         col_esq, col_dir = st.columns([1, 1])
 
         with col_esq:
