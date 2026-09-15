@@ -349,17 +349,17 @@ with main_col:
         formula_2 = c_f2.selectbox("Opção 2", list(tradutor_sesau.keys()), index=None, placeholder="Escolha uma opção")
         formula_3 = c_f3.selectbox("Opção 3", list(tradutor_sesau.keys()), index=None, placeholder="Escolha uma opção")
         
-        # FUNÇÃO FANTASMA SÓ PARA A TABELA (AGORA COM MEMÓRIA DE CÁLCULO)
+# FUNÇÃO FANTASMA SÓ PARA A TABELA (MEMÓRIA AMPLIADA COM MEDIDA DA BULA)
         def gerar_linha_extra(form_nome):
             if not form_nome:
                 return '<tr><td style="height: 35px;"></td><td></td><td></td></tr>'
             calc_e = calcular_aplv_matematica(idade_meses, form_nome)
             info_e = tradutor_sesau[form_nome]
             
-            memoria_html = f'''<details style="margin-top: 5px; cursor: pointer; color: #2D5A34;"><summary style="font-size: 11px; font-weight: 600;">Ver memória de cálculo</summary><div style="margin-top: 4px; padding: 6px; background: #F0F6F1; border-radius: 4px; border-left: 3px solid #859B48; font-size: 11px; line-height: 1.4; color: #111;"><b>Total/mês:</b> {calc_e["latas"]} latas ({calc_e["g_mes"]:.0f}g)<br><b>Pó/dia:</b> {calc_e["g_dia"]:.1f}g<br><b>Frequência:</b> {calc_e["freq"]}x ao dia<br><b>Diluição:</b> {calc_e["g_porcao"]:.2f}g pó para {calc_e["ml_porcao"]:.0f} mL água</div></details>'''
+            memoria_html = f'''<details style="margin-top: 8px; cursor: pointer; color: #2D5A34;"><summary style="font-size: 12.5px; font-weight: 600;">Ver memória de cálculo</summary><div style="margin-top: 6px; padding: 10px; background: #F0F6F1; border-radius: 6px; border-left: 4px solid #859B48; font-size: 12.5px; line-height: 1.6; color: #111;"><b>Medida padrão da lata:</b> {info_e["peso_medida"]}g de pó para {info_e["vol_agua"]:.0f} mL de água<br><b>Total/mês:</b> {calc_e["latas"]} latas ({calc_e["g_mes"]:.0f}g)<br><b>Pó/dia:</b> {calc_e["g_dia"]:.1f}g<br><b>Frequência:</b> {calc_e["freq"]}x ao dia<br><b>Diluição prescrita:</b> {calc_e["g_porcao"]:.2f}g pó para {calc_e["ml_porcao"]:.0f} mL água</div></details>'''
             
-            return f'<tr><td><strong>{info_e["codigo"]}</strong> - {info_e["desc"]}{memoria_html}</td><td>{calc_e["g_dia"]:.2f}g / {calc_e["ml_dia"]:.0f} ml</td><td>x 30 = {calc_e["g_mes"]:.0f}g / {(calc_e["ml_dia"]*30):.0f} ml<br><span style="color:#555; font-size:11px;">({calc_e["latas"]} latas)</span></td></tr>'
-            
+            return f'<tr><td><strong>{info_e["codigo"]}</strong> - {info_e["desc"]}{memoria_html}</td><td>{calc_e["g_dia"]:.2f}g / {calc_e["ml_dia"]:.0f} ml</td><td>x 30 = {calc_e["g_mes"]:.0f}g / {(calc_e["ml_dia"]*30):.0f} ml<br><span style="color:#555; font-size:11px;">({calc_e["latas"]} latas)</span></td></tr>'            
+
         linha_2 = gerar_linha_extra(formula_2)
         linha_3 = gerar_linha_extra(formula_3)
 
@@ -385,13 +385,14 @@ with main_col:
                 <tr>
                     <td>
                         <strong>{codigo_ses}</strong> - {desc_oficial}
-                        <details style="margin-top: 5px; cursor: pointer; color: #2D5A34;">
-                            <summary style="font-size: 11px; font-weight: 600;">Ver memória de cálculo</summary>
-                            <div style="margin-top: 4px; padding: 6px; background: #F0F6F1; border-radius: 4px; border-left: 3px solid #859B48; font-size: 11px; line-height: 1.4; color: #111;">
+                        <details style="margin-top: 8px; cursor: pointer; color: #2D5A34;">
+                            <summary style="font-size: 12.5px; font-weight: 600;">Ver memória de cálculo</summary>
+                            <div style="margin-top: 6px; padding: 10px; background: #F0F6F1; border-radius: 6px; border-left: 4px solid #859B48; font-size: 12.5px; line-height: 1.6; color: #111;">
+                                <b>Medida padrão da lata:</b> {info_form['peso_medida']}g de pó para {info_form['vol_agua']:.0f} mL de água<br>
                                 <b>Total/mês:</b> {calc['latas']} latas ({calc['g_mes']:.0f}g)<br>
                                 <b>Pó/dia:</b> {calc['g_dia']:.1f}g<br>
                                 <b>Frequência:</b> {calc['freq']}x ao dia<br>
-                                <b>Diluição:</b> {calc['g_porcao']:.2f}g pó para {calc['ml_porcao']:.0f} mL água
+                                <b>Diluição prescrita:</b> {calc['g_porcao']:.2f}g pó para {calc['ml_porcao']:.0f} mL água
                             </div>
                         </details>
                     </td>
