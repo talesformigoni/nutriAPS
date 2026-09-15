@@ -216,8 +216,8 @@ with main_col:
     st.header("1. Dados Biométricos")
     with st.container():
         c1, c2, c3, c4, c5 = st.columns(5)
-        data_nasc = c1.date_input("Data de Nascimento", value=None, format="DD/MM/YYYY")
-        data_aval = c2.date_input("Data da Avaliação", value=None, format="DD/MM/YYYY")
+        data_nasc = c1.date_input("Data de Nascimento", value=None, format="DD/MM/AAAA")
+        data_aval = c2.date_input("Data da Avaliação", value=None, format="DD/MM/AAAA")
         sexo = c3.selectbox("Sexo", ["Masculino", "Feminino"], index=None, placeholder="Selecione...")
         peso = c4.number_input("Peso (kg)", min_value=0.0, value=None, step=0.1, format="%.3f")
         altura = c5.number_input("Estatura (cm)", min_value=0.0, value=None, step=1.0, format="%.1f")
