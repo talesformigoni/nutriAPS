@@ -218,7 +218,7 @@ with main_col:
         c1, c2, c3, c4, c5 = st.columns(5)
         data_nasc = c1.date_input("Data de Nascimento", value=None, format="DD/MM/YYYY")
         data_aval = c2.date_input("Data da Avaliação", value=None, format="DD/MM/YYYY")
-        sexo = c3.selectbox("Sexo", [None, "Masculino", "Feminino"], index=0)
+        sexo = c3.selectbox("Sexo", ["Masculino", "Feminino"], index=None, placeholder="Selecione...")
         peso = c4.number_input("Peso (kg)", min_value=0.0, value=None, step=0.1, format="%.3f")
         altura = c5.number_input("Estatura (cm)", min_value=0.0, value=None, step=1.0, format="%.1f")
 
@@ -230,7 +230,7 @@ with main_col:
     st.header("2. Prescrição e Requerimentos")
     with st.container():
         c6, c7, c8 = st.columns([2, 1, 1])
-        formula_selecionada = c6.selectbox("Fórmula (Protocolo SESAU)", list(tradutor_sesau.keys()), index=None)
+        formula_selecionada = c6.selectbox("Fórmula (Protocolo SESAU)", list(tradutor_sesau.keys()), index=None, placeholder="Escolha uma opção")
 
         if data_nasc is not None and data_aval is not None and sexo is not None and peso is not None:
             idade_meses = (data_aval.year - data_nasc.year) * 12 + (data_aval.month - data_nasc.month)
@@ -346,8 +346,8 @@ with main_col:
         # CAIXAS DE SELEÇÃO PARA AS OPÇÕES 2 E 3
         st.markdown("<p style='color:#5A7260; font-size:0.95rem; margin-top:-0.5rem;'>Adicionar fórmulas alternativas à tabela (Opcional):</p>", unsafe_allow_html=True)
         c_f2, c_f3 = st.columns(2)
-        formula_2 = c_f2.selectbox("Opção 2", list(tradutor_sesau.keys()), index=None)
-        formula_3 = c_f3.selectbox("Opção 3", list(tradutor_sesau.keys()), index=None)
+        formula_2 = c_f2.selectbox("Opção 2", list(tradutor_sesau.keys()), index=None, placeholder="Escolha uma opção")
+        formula_3 = c_f3.selectbox("Opção 3", list(tradutor_sesau.keys()), index=None, placeholder="Escolha uma opção")
         
         # FUNÇÃO FANTASMA SÓ PARA A TABELA (AGORA COM MEMÓRIA DE CÁLCULO)
         def gerar_linha_extra(form_nome):
