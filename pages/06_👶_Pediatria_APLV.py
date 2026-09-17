@@ -173,7 +173,7 @@ def classificar_altura_sesau(z):
 # ==========================================
 # LÓGICA MATEMÁTICA SILENCIOSA (A -> G)
 # ==========================================
-def calcular_aplv_matematica(idade_meses, tipo_formula):
+def calcular_aplv_matematica(idade_meses, tipo_formula, freq_usuario):
     dados = tradutor_sesau[tipo_formula]
     
     if idade_meses < 3: A = 9
@@ -186,13 +186,10 @@ def calcular_aplv_matematica(idade_meses, tipo_formula):
     C = A * B
     D = C / 30.0
 
-    if idade_meses < 1: X = 8
-    elif idade_meses < 4: X = 6
-    elif idade_meses < 6: X = 5
-    elif idade_meses < 9: X = 4
-    else: X = 3
+    # Agora a frequência (X) é definida pelo profissional!
+    X = freq_usuario
 
-    E = D / X
+    E = D / X if X > 0 else 0
     F = (E * dados["vol_agua"]) / dados["peso_medida"]
     F_total = F * X
     G = (F_total * 69.0) / 100.0
@@ -225,17 +222,25 @@ with main_col:
     # LÓGICA DE PREENCHIMENTO AUTOMÁTICO REVERSO E PROTEÍNAS IOM
     default_kcal = None
     default_ptn = None
+    default_freq = 6
     idade_meses = 0
 
     st.header("2. Prescrição e Requerimentos")
     with st.container():
-        c6, c7, c8 = st.columns([2, 1, 1])
+        c6, c7, c8, c9 = st.columns([2, 1, 1, 1])
         formula_selecionada = c6.selectbox("Fórmula (Protocolo SESAU)", list(tradutor_sesau.keys()), index=None, placeholder="Escolha uma opção")
 
         if data_nasc is not None and data_aval is not None and sexo is not None and peso is not None:
             idade_meses = (data_aval.year - data_nasc.year) * 12 + (data_aval.month - data_nasc.month)
             if data_aval.day < data_nasc.day: idade_meses -= 1
             idade_meses = max(0, idade_meses)
+            
+            # Frequência sugerida pela idade (Baseado no estudo de Alimentação Responsiva)
+            if idade_meses < 1: default_freq = 8
+            elif idade_meses < 4: default_freq = 6
+            elif idade_meses < 6: default_freq = 5
+            elif idade_meses < 9: default_freq = 4
+            else: default_freq = 3
             
             # Necessidades de Proteína Recomendada (IOM, 2005)
             if idade_meses < 6: default_ptn = 1.52
@@ -244,7 +249,7 @@ with main_col:
 
             # Engenharia Reversa do Kcal/kg peso/dia com base no máximo de latas permitidas
             if formula_selecionada is not None and peso > 0:
-                calc_temp = calcular_aplv_matematica(idade_meses, formula_selecionada)
+                calc_temp = calcular_aplv_matematica(idade_meses, formula_selecionada, default_freq)
                 kcal_max_formula = calc_temp['kcal_formula']
                 
                 # Desconto de Alimentação Complementar (CONITEC)
@@ -266,22 +271,26 @@ with main_col:
 
         fator_kcal = c7.number_input("Kcal/kg peso/dia", min_value=0.0, value=default_kcal, step=1.0, format="%.1f")
         fator_ptn = c8.number_input("g PTN/kg peso/dia", min_value=0.0, value=default_ptn, step=0.1, format="%.2f")
+        frequencia = c9.number_input("Ofertas/dia", min_value=1, value=default_freq, step=1)
 
     st.markdown("---")
 
     # RESULTADOS - SÓ RENDERIZA SE TIVER TUDO PREENCHIDO
-    if data_nasc and data_aval and sexo and peso and altura and formula_selecionada and fator_kcal and fator_ptn:
+    if data_nasc and data_aval and sexo and peso and altura and formula_selecionada and fator_kcal and fator_ptn and frequencia:
         
         vet_kcal = peso * fator_kcal
         
-        # GET Independente (Schofield 0-3 anos * Fator de Atividade 1.5)
-        if sexo == 'Masculino':
-            get_kcal = ((59.512 * peso) - 30.4) * 1.5
-        else:
-            get_kcal = ((58.317 * peso) - 31.1) * 1.5
-        get_kcal = get_kcal if get_kcal > 0 else 0
+        # GET Oficial SESAU (FAO/WHO 2004 - Quadro 3)
+        is_masc_get = (sexo == 'Masculino')
+        if idade_meses < 3: fator_get = 105.0 if is_masc_get else 100.0
+        elif idade_meses < 6: fator_get = 81.0 if is_masc_get else 83.0
+        elif idade_meses < 9: fator_get = 79.0 if is_masc_get else 78.0
+        elif idade_meses < 12: fator_get = 80.0 if is_masc_get else 79.0
+        else: fator_get = 83.0 if is_masc_get else 80.0
         
-        calc = calcular_aplv_matematica(idade_meses, formula_selecionada)
+        get_kcal = peso * fator_get
+        
+        calc = calcular_aplv_matematica(idade_meses, formula_selecionada, frequencia)
         imc_calc = peso / ((altura/100.0) ** 2) if altura > 0 else 0
         
         # Uso do z-score oficial com base na tabela da SESAU
@@ -359,7 +368,7 @@ with main_col:
         def gerar_linha_extra(form_nome):
             if not form_nome:
                 return '<tr><td style="height: 35px;"></td><td></td><td></td></tr>'
-            calc_e = calcular_aplv_matematica(idade_meses, form_nome)
+            calc_e = calcular_aplv_matematica(idade_meses, form_nome, frequencia)
             info_e = tradutor_sesau[form_nome]
             
             memoria_html = f'''<details style="margin-top: 8px; cursor: pointer; color: #2D5A34;"><summary style="font-size: 12.5px; font-weight: 600;">Ver memória de cálculo</summary><div style="margin-top: 6px; padding: 10px; background: #F0F6F1; border-radius: 6px; border-left: 4px solid #859B48; font-size: 12.5px; line-height: 1.6; color: #111;"><b>Medida padrão da lata:</b> {info_e["peso_medida"]}g de pó para {info_e["vol_agua"]:.0f} mL de água<br><b>Total/mês:</b> {calc_e["latas"]} latas ({calc_e["g_mes"]:.0f}g)<br><b>Pó/dia:</b> {calc_e["g_dia"]:.1f}g<br><b>Frequência:</b> {calc_e["freq"]}x ao dia<br><b>Diluição prescrita:</b> {calc_e["g_porcao"]:.2f}g pó para {calc_e["ml_porcao"]:.0f} mL água</div></details>'''
