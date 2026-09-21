@@ -600,15 +600,26 @@ with main_col:
             fator_referencia = obter_fator_energia_paplvro(idade_meses, sexo)
 
             if formula_selecionada is not None and peso > 0:
-                calc_temp = calcular_aplv_matematica(idade_meses, formula_selecionada, default_freq)
-                kcal_max_formula = calc_temp['kcal_formula']
+                # A engenharia reversa é mantida APENAS para conhecer o teto da fórmula.
+                # Ela não determina mais o VET automático.
+                calc_temp = calcular_aplv_matematica(
+                    idade_meses,
+                    formula_selecionada,
+                    default_freq
+                )
+                kcal_max_formula = calc_temp["kcal_formula"]
                 comp = obter_desconto_alimentacao_complementar(idade_meses)
+
+                # Valor de conferência: fórmula no teto + alimentação complementar
+                # de referência. NÃO é utilizado como meta automática do VET.
                 vet_maximo_teto = kcal_max_formula + comp
                 limite_kcal_teto = vet_maximo_teto / peso
 
-                # Nunca iniciar com VET inferior ao GET de referência.
-                # Se o teto da fórmula + AC permitir valor maior, preservamos o maior valor.
-                default_kcal = max(fator_referencia, limite_kcal_teto)
+                # REGRA CENTRAL:
+                # o VET automático nasce da necessidade energética do Quadro 3,
+                # e não da quantidade máxima de latas disponível.
+                default_kcal = fator_referencia
+
             elif peso > 0:
                 default_kcal = fator_referencia
 
@@ -620,24 +631,9 @@ with main_col:
                 st.caption("ℹ️ Para FSL, o protocolo informa dispensação conforme FEH/FAA. Como os tetos divergem entre 12–24 meses, o sistema usa 6 latas (critério conservador da FEH).")
 
         if limite_kcal_teto is not None and limite_kcal_teto > 0:
-            # Em menores de 6 meses, a fórmula deve contemplar 100% das necessidades;
-            # portanto, o teto energético da fórmula também funciona como máximo do VET.
             if idade_meses < 6:
-                fator_kcal = c7.number_input(
-                    "Kcal/kg peso/dia",
-                    min_value=float(fator_referencia),
-                    max_value=float(max(limite_kcal_teto, fator_referencia)),
-                    value=float(min(default_kcal, max(limite_kcal_teto, fator_referencia))),
-                    step=1.0,
-                    format="%.1f",
-                    help=(
-                        f"Referência do Quadro 3: {fator_referencia:.1f} kcal/kg/dia. "
-                        f"Teto energético da fórmula: {limite_kcal_teto:.1f} kcal/kg/dia."
-                    )
-                )
-            else:
-                # Após 6 meses, o teto limita a quantidade de FÓRMULA, não o VET total.
-                # Energia adicional pode ser completada pela alimentação complementar.
+                # <6 meses: o valor inicial continua sendo o Quadro 3.
+                # O teto serve exclusivamente como trava da quantidade de fórmula.
                 fator_kcal = c7.number_input(
                     "Kcal/kg peso/dia",
                     min_value=float(fator_referencia),
@@ -645,10 +641,25 @@ with main_col:
                     step=1.0,
                     format="%.1f",
                     help=(
-                        f"Referência mínima do Quadro 3: {fator_referencia:.1f} kcal/kg/dia. "
-                        f"O teto da fórmula equivale a {limite_kcal_teto:.1f} kcal/kg/dia "
-                        "quando somado à alimentação complementar de referência, mas limita "
-                        "somente a fórmula — não reduz o VET total."
+                        f"Valor automático pelo Quadro 3: {fator_referencia:.1f} kcal/kg/dia. "
+                        f"A fórmula possui teto administrativo equivalente a "
+                        f"{calc_temp['latas']} lata(s) de 400 g/mês. "
+                        "O teto não é usado como meta energética."
+                    )
+                )
+            else:
+                # >=6 meses: o teto limita a fórmula; a alimentação complementar
+                # completa o restante do VET quando necessário.
+                fator_kcal = c7.number_input(
+                    "Kcal/kg peso/dia",
+                    min_value=float(fator_referencia),
+                    value=float(default_kcal),
+                    step=1.0,
+                    format="%.1f",
+                    help=(
+                        f"Valor automático pelo Quadro 3: {fator_referencia:.1f} kcal/kg/dia. "
+                        "O teto PAPLVRO limita somente a quantidade de fórmula; "
+                        "não determina o VET total."
                     )
                 )
         else:
@@ -712,8 +723,21 @@ with main_col:
         if data_aval > data_limite_paplvro:
             st.warning("⚠️ **Atenção:** A criança possui mais de 24 meses (2 anos). De acordo com o regulamento do PAPLVRO (GENE-SESAU), ela não atende ao critério de idade para a dispensação destas fórmulas infantis.")
 
-        if calc['limitado_teto']:
-            st.warning("⚠️ O VET informado exigiria quantidade superior ao teto mensal do PAPLVRO. A quantidade de fórmula foi automaticamente limitada ao máximo permitido pelo protocolo.")
+        if calc["limitado_teto"]:
+            if idade_meses < 6:
+                st.error(
+                    "⚠️ A necessidade energética calculada exigiria quantidade de fórmula "
+                    "superior ao teto mensal do PAPLVRO. A fórmula foi limitada ao teto. "
+                    "Como a criança tem menos de 6 meses e a alimentação complementar de "
+                    "referência é 0 kcal/dia, revise individualmente a prescrição e o fluxo "
+                    "administrativo."
+                )
+            else:
+                st.warning(
+                    "⚠️ A quantidade de fórmula necessária para o VET calculado ultrapassaria "
+                    "o teto mensal do PAPLVRO. A fórmula foi limitada automaticamente ao teto; "
+                    "o restante do VET deverá ser contemplado pela alimentação complementar."
+                )
 
         col_esq, col_dir = st.columns([1, 1])
 
@@ -1127,22 +1151,37 @@ with main_col:
             d3.metric("EER", f"{dri['eer']:.0f} kcal/d")
             d4.metric("EER/kg", f"{dri['eer_kg']:.1f} kcal/kg/d")
 
-            vet_teto_atual = calc_teto['kcal_formula'] + obter_desconto_alimentacao_complementar(idade_meses)
+            vet_teto_atual = (
+                calc_teto["kcal_formula"]
+                + obter_desconto_alimentacao_complementar(idade_meses)
+            )
+            diferenca_dri_vet = dri["eer"] - vet_kcal
+
             st.caption(
-                f"PAPLVRO/FAO-WHO: {get_kcal:.0f} kcal/d · "
+                f"PAPLVRO/FAO-WHO (Quadro 3): {get_kcal:.0f} kcal/d · "
                 f"VET adotado: {vet_kcal:.0f} kcal/d · "
-                f"Referência fórmula no teto + AC: {vet_teto_atual:.0f} kcal/d."
+                f"EER DRI 2023: {dri['eer']:.0f} kcal/d · "
+                f"Fórmula no teto + AC de referência: {vet_teto_atual:.0f} kcal/d."
             )
 
-            if dri['eer'] > vet_teto_atual:
-                st.warning(
-                    f"A EER estimada pela DRI 2023 ({dri['eer']:.0f} kcal/d) é superior ao "
-                    f"valor de referência fórmula no teto + AC ({vet_teto_atual:.0f} kcal/d). "
-                    "Use a diferença como sinal para avaliação clínica, evolução antropométrica "
-                    "e adequação da alimentação complementar; o teto PAPLVRO permanece inalterado."
+            if abs(diferenca_dri_vet) <= 10:
+                st.success(
+                    f"A EER da DRI 2023 está próxima do VET adotado "
+                    f"(diferença de {abs(diferenca_dri_vet):.0f} kcal/d). "
+                    "A DRI permanece apenas como conferência científica."
+                )
+            elif diferenca_dri_vet > 10:
+                st.info(
+                    f"A EER da DRI 2023 está {diferenca_dri_vet:.0f} kcal/d acima do "
+                    "VET adotado pelo Quadro 3. Avalie o dado junto à evolução "
+                    "antropométrica e ao julgamento clínico; o teto PAPLVRO não é usado "
+                    "como meta calórica."
                 )
             else:
-                st.success("A EER estimada pela DRI 2023 não supera a referência formada pela fórmula no teto + alimentação complementar para a fórmula selecionada.")
+                st.info(
+                    f"O VET adotado está {abs(diferenca_dri_vet):.0f} kcal/d acima da "
+                    "EER calculada pela DRI 2023. A DRI é exibida somente como conferência."
+                )
 
         # Memória explicativa dos cálculos usados para chegar ao resultado final.
         # É apenas uma conferência matemática e não altera nenhum valor da prescrição.
