@@ -233,32 +233,56 @@ tradutor_sesau = {
     "Pregomin Pepti": {
         "codigo": "261",
         "desc": "Fórmula infantil com proteína láctea extensamente hidrolisada sem lactose (FEH)",
-        "peso_medida": 4.3, "vol_agua": 30.0, "classe": "FEH"
+        "peso_medida": 4.3,
+        "vol_agua": 30.0,
+        "classe": "FEH",
+        "kcal_100g": 512.0,
+        "kcal_100ml": 66.0,
     },
     "Aptamil SL (Sem Lactose)": {
         "codigo": "264",
         "desc": "Fórmula infantil sem lactose (FSL)",
-        "peso_medida": 4.3, "vol_agua": 30.0, "classe": "FSL"
+        "peso_medida": 4.3,
+        "vol_agua": 30.0,
+        "classe": "FSL",
+        "kcal_100g": 517.0,
+        "kcal_100ml": 67.0,
     },
     "Neocate LCP (Até 3 anos)": {
         "codigo": "274",
         "desc": "Fórmula infantil à base de aminoácidos livres (FAA)",
-        "peso_medida": 4.6, "vol_agua": 30.0, "classe": "FAA"
+        "peso_medida": 4.6,
+        "vol_agua": 30.0,
+        "classe": "FAA",
+        "kcal_100g": 496.0,
+        "kcal_100ml": 68.0,
     },
     "Aptamil Soja 1 (0 a 6 meses)": {
         "codigo": "272",
         "desc": "Fórmula infantil à base de proteína isolada de soja (FS)",
-        "peso_medida": 4.6, "vol_agua": 30.0, "classe": "FS"
+        "peso_medida": 4.6,
+        "vol_agua": 30.0,
+        "classe": "FS",
+        "kcal_100g": 496.0,
+        "kcal_100ml": 69.0,
     },
     "Aptamil Soja 2 (A partir 6 meses)": {
         "codigo": "272",
         "desc": "Fórmula infantil à base de proteína isolada de soja (FS)",
-        "peso_medida": 4.6, "vol_agua": 30.0, "classe": "FS"
+        "peso_medida": 4.6,
+        "vol_agua": 30.0,
+        "classe": "FS",
+        "kcal_100g": 496.0,
+        "kcal_100ml": 69.0,
     },
     "Neocate Advance (Acima 1 ano)": {
         "codigo": "258",
         "desc": "Dieta pediátrica para nutrição enteral à base de aminoácidos livres com restrição de lactose",
-        "peso_medida": 25.0, "vol_agua": 85.0, "classe": "FAA"
+        "peso_medida": 7.3,
+        "vol_agua": 30.0,
+        "classe": "FAA",
+        "kcal_100g": 475.0,
+        "kcal_100ml": 100.0,
     }
 }
 
@@ -384,51 +408,115 @@ def calcular_dri_2023(idade_meses, idade_anos_decimal, sexo, peso, altura):
 # LÓGICA MATEMÁTICA SILENCIOSA DO TETO (A -> G)
 # ==========================================
 def calcular_aplv_matematica(idade_meses, tipo_formula, freq_usuario):
-    """Engenharia reversa original: parte do teto para descobrir o máximo permitido."""
+    """
+    Engenharia reversa do teto PAPLVRO.
+
+    O teto é definido em gramas de pó. A energia máxima é calculada diretamente
+    pela densidade energética do PÓ (kcal/100 g). O volume exibido é o volume
+    FINAL da preparação pronta, calculado pela densidade da preparação
+    reconstituída (kcal/100 mL).
+
+    A água necessária à reconstituição é calculada separadamente e fica disponível
+    apenas para a memória de cálculo.
+    """
     dados = tradutor_sesau[tipo_formula]
 
     A = obter_teto_latas(idade_meses, tipo_formula)
-    B = 400
+    B = 400.0
     C = A * B
     D = C / 30.0
     X = freq_usuario
 
-    E = D / X if X > 0 else 0
-    F = (E * dados["vol_agua"]) / dados["peso_medida"] if dados["peso_medida"] > 0 else 0
-    F_total = F * X
-    G = (F_total * 69.0) / 100.0
+    # Quantidade de pó no teto
+    E = D / X if X > 0 else 0.0
+
+    # Energia do teto: calculada diretamente pelas kcal/100 g do pó
+    G = (D * dados["kcal_100g"]) / 100.0
+
+    # Volume FINAL da preparação pronta
+    F_total = (
+        (G * 100.0) / dados["kcal_100ml"]
+        if dados["kcal_100ml"] > 0 else 0.0
+    )
+    F = F_total / X if X > 0 else 0.0
+
+    # Água de reconstituição: somente para memória de cálculo
+    agua_dia = (
+        (D / dados["peso_medida"]) * dados["vol_agua"]
+        if dados["peso_medida"] > 0 else 0.0
+    )
+    agua_porcao = agua_dia / X if X > 0 else 0.0
 
     return {
-        "latas": A, "g_mes": C, "g_dia": D, "freq": X,
-        "g_porcao": E, "ml_porcao": F, "ml_dia": F_total, "kcal_formula": G
+        "latas": A,
+        "g_mes": C,
+        "g_dia": D,
+        "freq": X,
+        "g_porcao": E,
+        "ml_porcao": F,
+        "ml_dia": F_total,
+        "kcal_formula": G,
+        "agua_dia": agua_dia,
+        "agua_porcao": agua_porcao,
+        "kcal_100g": dados["kcal_100g"],
+        "kcal_100ml": dados["kcal_100ml"],
     }
 
 
 def calcular_prescricao_por_vet(vet_kcal, idade_meses, tipo_formula, freq_usuario):
     """
-    Converte o VET adotado em quantidade de fórmula e aplica o teto PAPLVRO como
-    limite absoluto. Preserva a densidade de 69 kcal/100 mL usada no código original.
+    Converte o VET adotado em quantidade de fórmula e aplica o teto PAPLVRO
+    como limite absoluto.
+
+    REGRA MATEMÁTICA:
+      1) kcal da fórmula = VET - alimentação complementar de referência;
+      2) gramas de pó = kcal da fórmula / (kcal por grama de pó);
+      3) aplica-se o teto mensal em gramas;
+      4) após eventual limitação, recalculam-se as kcal efetivas da fórmula;
+      5) volume em mL = volume FINAL da preparação pronta, usando kcal/100 mL;
+      6) água necessária à reconstituição é calculada separadamente e usada
+         somente na memória de cálculo.
     """
     dados = tradutor_sesau[tipo_formula]
     teto_latas = obter_teto_latas(idade_meses, tipo_formula)
     teto_g_mes = teto_latas * 400.0
     comp = obter_desconto_alimentacao_complementar(idade_meses)
 
-    kcal_formula = max(vet_kcal - comp, 0.0)
-    ml_dia = (kcal_formula * 100.0) / 69.0 if kcal_formula > 0 else 0.0
-    g_dia = (ml_dia * dados["peso_medida"]) / dados["vol_agua"] if dados["vol_agua"] > 0 else 0.0
+    kcal_formula_teorica = max(vet_kcal - comp, 0.0)
+
+    # Quantidade de pó necessária pelas kcal/100 g do produto
+    g_dia = (
+        (kcal_formula_teorica * 100.0) / dados["kcal_100g"]
+        if dados["kcal_100g"] > 0 else 0.0
+    )
     g_mes = g_dia * 30.0
 
     limitado_teto = g_mes > teto_g_mes
+
     if limitado_teto:
         g_mes = teto_g_mes
         g_dia = g_mes / 30.0
-        ml_dia = (g_dia * dados["vol_agua"]) / dados["peso_medida"] if dados["peso_medida"] > 0 else 0.0
-        kcal_formula = (ml_dia * 69.0) / 100.0
+
+    # Energia REAL fornecida pela quantidade de pó efetivamente calculada
+    kcal_formula = (g_dia * dados["kcal_100g"]) / 100.0
+
+    # Volume FINAL da fórmula preparada
+    ml_dia = (
+        (kcal_formula * 100.0) / dados["kcal_100ml"]
+        if dados["kcal_100ml"] > 0 else 0.0
+    )
+
+    # Água para reconstituição — somente para memória
+    agua_dia = (
+        (g_dia / dados["peso_medida"]) * dados["vol_agua"]
+        if dados["peso_medida"] > 0 else 0.0
+    )
 
     X = freq_usuario
     g_porcao = g_dia / X if X > 0 else 0.0
     ml_porcao = ml_dia / X if X > 0 else 0.0
+    agua_porcao = agua_dia / X if X > 0 else 0.0
+
     equiv_latas = g_mes / 400.0 if g_mes > 0 else 0.0
     latas_solicitadas = min(math.ceil(equiv_latas), teto_latas) if teto_latas > 0 else 0
 
@@ -445,8 +533,13 @@ def calcular_prescricao_por_vet(vet_kcal, idade_meses, tipo_formula, freq_usuari
         "kcal_formula": kcal_formula,
         "kcal_comp": comp,
         "kcal_comp_real": max(vet_kcal - kcal_formula, 0.0),
-        "limitado_teto": limitado_teto
+        "limitado_teto": limitado_teto,
+        "agua_dia": agua_dia,
+        "agua_porcao": agua_porcao,
+        "kcal_100g": dados["kcal_100g"],
+        "kcal_100ml": dados["kcal_100ml"],
     }
+
 
 # ==========================================
 # INTERFACE PRINCIPAL
@@ -660,7 +753,7 @@ with main_col:
             st.markdown(f"<p class='passo-ag'><b>D)</b> Teto Dia (C ÷ 30): <b>{calc_teto['g_dia']:.1f}g</b></p>", unsafe_allow_html=True)
             st.markdown(f"<p class='passo-ag'><b>X)</b> Frequência: <b>{calc['freq']}x ao dia</b></p>", unsafe_allow_html=True)
             st.markdown(f"<p class='passo-ag'><b>E)</b> Pó p/ mamadeira: <b>{calc['g_porcao']:.2f}g</b></p>", unsafe_allow_html=True)
-            st.markdown(f"<p class='passo-ag'><b>F)</b> Vol. estimado/mamadeira: <b>{calc['ml_porcao']:.0f} mL</b></p>", unsafe_allow_html=True)
+            st.markdown(f"<p class='passo-ag'><b>F)</b> Vol. final preparado/mamadeira: <b>{calc['ml_porcao']:.1f} mL</b></p>", unsafe_allow_html=True)
             st.markdown(f"<p class='passo-ag'><b>G)</b> Kcal diárias na fórmula: <b>{calc['kcal_formula']:.1f} kcal</b></p>", unsafe_allow_html=True)
             st.markdown(f"<p class='passo-ag' style='margin-top:10px;'><b>Solicitação calculada:</b> {calc['g_mes']:.0f}g/mês ({calc['equiv_latas']:.2f} latas eq.) → <b>{calc['latas']} lata(s)</b></p>", unsafe_allow_html=True)
             st.markdown('</div>', unsafe_allow_html=True)
@@ -700,8 +793,8 @@ with main_col:
                 <div class="mem-inline-body">
                     <div class="mem-inline-grid">
                         <div class="mem-inline-card">
-                            <span>Medida padrão</span>
-                            <strong>{info_formula["peso_medida"]:.1f} g / {info_formula["vol_agua"]:.0f} mL</strong>
+                            <span>Diluição padrão</span>
+                            <strong>{info_formula["peso_medida"]:.1f} g / {info_formula["vol_agua"]:.0f} mL água</strong>
                         </div>
                         <div class="mem-inline-card">
                             <span>Teto PAPLVRO</span>
@@ -728,6 +821,14 @@ with main_col:
                             <b>{calc_formula["kcal_formula"]:.1f} kcal/d</b>
                         </div>
                         <div class="mem-inline-row">
+                            <span>Densidade do pó</span>
+                            <b>{info_formula["kcal_100g"]:.0f} kcal/100 g</b>
+                        </div>
+                        <div class="mem-inline-row">
+                            <span>Densidade preparada</span>
+                            <b>{info_formula["kcal_100ml"]:.0f} kcal/100 mL</b>
+                        </div>
+                        <div class="mem-inline-row">
                             <span>% do VET pela fórmula</span>
                             <b>{perc_formula:.1f}%</b>
                         </div>
@@ -746,16 +847,24 @@ with main_col:
                             <b>{calc_formula["g_dia"]:.2f} g</b>
                         </div>
                         <div class="mem-inline-row">
-                            <span>Volume estimado por dia</span>
+                            <span>Volume final preparado por dia</span>
                             <b>{calc_formula["ml_dia"]:.1f} mL</b>
+                        </div>
+                        <div class="mem-inline-row">
+                            <span>Água para reconstituição</span>
+                            <b>{calc_formula["agua_dia"]:.1f} mL/dia</b>
                         </div>
                         <div class="mem-inline-row">
                             <span>Frequência</span>
                             <b>{calc_formula["freq"]}x/dia</b>
                         </div>
                         <div class="mem-inline-row">
-                            <span>Por oferta</span>
+                            <span>Por oferta (volume final)</span>
                             <b>{calc_formula["g_porcao"]:.2f} g / {calc_formula["ml_porcao"]:.1f} mL</b>
+                        </div>
+                        <div class="mem-inline-row">
+                            <span>Água/oferta (memória)</span>
+                            <b>{calc_formula["agua_porcao"]:.1f} mL</b>
                         </div>
                     </div>
 
@@ -782,7 +891,7 @@ with main_col:
                 vet_kcal
             )
 
-            return f'<tr><td><strong>{info_e["codigo"]}</strong> - {info_e["desc"]}{memoria_html}</td><td>{calc_e["g_dia"]:.2f}g / {calc_e["ml_dia"]:.0f} ml</td><td>x 30 = {calc_e["g_mes"]:.0f}g / {(calc_e["ml_dia"]*30):.0f} ml<br><span style="color:#555; font-size:11px;">({calc_e["latas"]} latas)</span></td></tr>'
+            return f'<tr><td><strong>{info_e["codigo"]}</strong> - {info_e["desc"]}{memoria_html}</td><td>{calc_e["g_dia"]:.2f}g / {calc_e["ml_dia"]:.1f} ml</td><td>x 30 = {calc_e["g_mes"]:.0f}g / {(calc_e["ml_dia"]*30):.1f} ml<br><span style="color:#555; font-size:11px;">({calc_e["latas"]} latas)</span></td></tr>'
 
         linha_2 = gerar_linha_extra(formula_2)
         linha_3 = gerar_linha_extra(formula_3)
@@ -819,8 +928,8 @@ with main_col:
                         <strong>{codigo_ses}</strong> - {desc_oficial}
                         {memoria_principal_html}
                     </td>
-                    <td>{calc['g_dia']:.2f}g / {calc['ml_dia']:.0f} ml</td>
-                    <td>x 30 = {calc['g_mes']:.0f}g / {(calc['ml_dia']*30):.0f} ml<br><span style="color:#555; font-size:11px;">({calc['latas']} latas)</span></td>
+                    <td>{calc['g_dia']:.2f}g / {calc['ml_dia']:.1f} ml</td>
+                    <td>x 30 = {calc['g_mes']:.0f}g / {(calc['ml_dia']*30):.1f} ml<br><span style="color:#555; font-size:11px;">({calc['latas']} latas)</span></td>
                 </tr>
                 <!-- OPÇÕES ADICIONAIS -->
                 {linha_2}
@@ -838,10 +947,10 @@ with main_col:
                 <tr>
                     <td>% VET fórmula: {percentual_vet_formula:.1f}%</td>
                     <td>Diluição (g/porção): {calc['g_porcao']:.2f}g</td>
-                    <td>Volume final/porção (mL): {calc['ml_porcao']:.0f}ml</td>
+                    <td>Volume final/porção (mL): {calc['ml_porcao']:.1f}ml</td>
                 </tr>
                 <tr>
-                    <td colspan="3">Nº porções/dia: {calc['ml_porcao']:.0f}ml / {calc['freq']}X/dia.</td>
+                    <td colspan="3">Nº porções/dia: {calc['ml_porcao']:.1f}ml / {calc['freq']}X/dia.</td>
                 </tr>
             </table>
         </div>
@@ -1022,18 +1131,18 @@ with main_col:
             st.caption(
                 f"PAPLVRO/FAO-WHO: {get_kcal:.0f} kcal/d · "
                 f"VET adotado: {vet_kcal:.0f} kcal/d · "
-                f"VET máximo compatível com o teto: {vet_teto_atual:.0f} kcal/d."
+                f"Referência fórmula no teto + AC: {vet_teto_atual:.0f} kcal/d."
             )
 
             if dri['eer'] > vet_teto_atual:
                 st.warning(
                     f"A EER estimada pela DRI 2023 ({dri['eer']:.0f} kcal/d) é superior ao "
-                    f"VET máximo comportado pelo teto ({vet_teto_atual:.0f} kcal/d). "
+                    f"valor de referência fórmula no teto + AC ({vet_teto_atual:.0f} kcal/d). "
                     "Use a diferença como sinal para avaliação clínica, evolução antropométrica "
                     "e adequação da alimentação complementar; o teto PAPLVRO permanece inalterado."
                 )
             else:
-                st.success("A EER estimada pela DRI 2023 cabe dentro do teto energético calculado para a fórmula selecionada.")
+                st.success("A EER estimada pela DRI 2023 não supera a referência formada pela fórmula no teto + alimentação complementar para a fórmula selecionada.")
 
         # Memória explicativa dos cálculos usados para chegar ao resultado final.
         # É apenas uma conferência matemática e não altera nenhum valor da prescrição.
@@ -1104,7 +1213,7 @@ with main_col:
                     <p>O teto quantitativo usado no cálculo é de <b>{calc_teto["latas"]} lata(s) equivalentes de 400 g/mês</b>,
                     totalizando {calc_teto["g_mes"]:.0f} g/mês.</p>
                     <div class="memoria-equacao">
-                        Teto energético da fórmula ≈ <b>{calc_teto["kcal_formula"]:.1f} kcal/dia</b><br>
+                        Teto energético da fórmula = <b>{calc_teto["kcal_formula"]:.1f} kcal/dia</b><br>
                         Quantidade efetivamente calculada = <b>{calc["g_mes"]:.1f} g/mês</b>
                         ({calc["equiv_latas"]:.2f} lata(s) equivalente(s))
                     </div>
@@ -1133,25 +1242,32 @@ with main_col:
 
                 <div class="memoria-etapa">
                     <div class="memoria-numero">5</div>
-                    <h5>Conversão das kcal da fórmula em volume</h5>
-                    <p>O código preserva a densidade energética de 69 kcal/100 mL utilizada na versão original.</p>
+                    <h5>Conversão das kcal da fórmula em pó</h5>
+                    <p>A quantidade de pó é calculada diretamente pelo valor energético do produto em <b>kcal/100 g</b>, sem usar o volume de água como se fosse volume final.</p>
                     <div class="memoria-equacao">
-                        volume/dia = kcal da fórmula × 100 ÷ 69<br>
-                        = {kcal_formula_final:.1f} × 100 ÷ 69<br>
-                        <b>= {calc["ml_dia"]:.1f} mL/dia</b>
+                        Densidade do pó = {info_form["kcal_100g"]:.0f} kcal/100 g<br>
+                        pó/dia = kcal da fórmula × 100 ÷ kcal/100 g<br>
+                        = {kcal_formula_final:.1f} × 100 ÷ {info_form["kcal_100g"]:.0f}<br>
+                        <b>= {calc["g_dia"]:.2f} g/dia</b><br><br>
+                        pó/mês = {calc["g_dia"]:.2f} × 30 =
+                        <b>{calc["g_mes"]:.1f} g/mês</b>
                     </div>
                 </div>
 
                 <div class="memoria-etapa">
                     <div class="memoria-numero">6</div>
-                    <h5>Conversão do volume em pó</h5>
-                    <p>Usa-se a relação de preparo cadastrada para <b>{formula_selecionada}</b>.</p>
+                    <h5>Volume final da preparação pronta</h5>
+                    <p>O volume usado no laudo é o <b>volume final da fórmula preparada</b>, calculado pela densidade energética da preparação pronta em kcal/100 mL. O volume de água aparece abaixo apenas como conferência de reconstituição.</p>
                     <div class="memoria-equacao">
-                        Relação cadastrada = {info_form["peso_medida"]:.2f} g para {info_form["vol_agua"]:.0f} mL<br>
-                        pó/dia = {calc["ml_dia"]:.1f} × {info_form["peso_medida"]:.2f} ÷ {info_form["vol_agua"]:.0f}<br>
-                        <b>= {calc["g_dia"]:.2f} g/dia</b><br><br>
-                        pó/mês = {calc["g_dia"]:.2f} × 30 =
-                        <b>{calc["g_mes"]:.1f} g/mês</b>
+                        Densidade preparada = {info_form["kcal_100ml"]:.0f} kcal/100 mL<br>
+                        volume final/dia = kcal da fórmula × 100 ÷ kcal/100 mL<br>
+                        = {kcal_formula_final:.1f} × 100 ÷ {info_form["kcal_100ml"]:.0f}<br>
+                        <b>= {calc["ml_dia"]:.1f} mL/dia de fórmula pronta</b><br><br>
+
+                        Água para reconstituição (somente conferência):<br>
+                        relação do fabricante = {info_form["peso_medida"]:.2f} g de pó para {info_form["vol_agua"]:.0f} mL de água<br>
+                        água/dia = ({calc["g_dia"]:.2f} ÷ {info_form["peso_medida"]:.2f}) × {info_form["vol_agua"]:.0f}<br>
+                        <b>= {calc["agua_dia"]:.1f} mL de água/dia</b>
                     </div>
                 </div>
 
@@ -1166,8 +1282,14 @@ with main_col:
                         (teto: {calc_teto["latas"]})<br><br>
                         pó/oferta = {calc["g_dia"]:.2f} ÷ {calc["freq"]} =
                         <b>{calc["g_porcao"]:.2f} g</b><br>
-                        volume/oferta = {calc["ml_dia"]:.1f} ÷ {calc["freq"]} =
-                        <b>{calc["ml_porcao"]:.1f} mL</b>
+                        volume final/oferta = {calc["ml_dia"]:.1f} ÷ {calc["freq"]} =
+                        <b>{calc["ml_porcao"]:.1f} mL de fórmula pronta</b><br>
+                        água/oferta (somente memória) = {calc["agua_dia"]:.1f} ÷ {calc["freq"]} =
+                        <b>{calc["agua_porcao"]:.1f} mL de água</b><br><br>
+                        Conferência do volume final:<br>
+                        {calc["ml_porcao"]:.2f} mL × {calc["freq"]} =
+                        <b>{(calc["ml_porcao"] * calc["freq"]):.2f} mL/dia</b>
+                        ≈ {calc["ml_dia"]:.1f} mL/dia
                     </div>
                 </div>
 
