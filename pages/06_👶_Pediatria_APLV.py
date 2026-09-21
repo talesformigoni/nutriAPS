@@ -747,7 +747,7 @@ with main_col:
                         </div>
                         <div class="mem-inline-row">
                             <span>Volume estimado por dia</span>
-                            <b>{calc_formula["ml_dia"]:.0f} mL</b>
+                            <b>{calc_formula["ml_dia"]:.1f} mL</b>
                         </div>
                         <div class="mem-inline-row">
                             <span>Frequência</span>
@@ -755,7 +755,7 @@ with main_col:
                         </div>
                         <div class="mem-inline-row">
                             <span>Por oferta</span>
-                            <b>{calc_formula["g_porcao"]:.2f} g / {calc_formula["ml_porcao"]:.0f} mL</b>
+                            <b>{calc_formula["g_porcao"]:.2f} g / {calc_formula["ml_porcao"]:.1f} mL</b>
                         </div>
                     </div>
 
